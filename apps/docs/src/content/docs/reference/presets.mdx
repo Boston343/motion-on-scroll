@@ -1,0 +1,62 @@
+---
+title: Built-in Presets
+description: Animation presets shipped with Motion-On-Scroll and how to extend them.
+---
+
+## Available presets
+
+All of the standard AOS presets are supported.
+
+### Fades
+
+- fade
+- fade-up
+- fade-down
+- fade-left
+- fade-right
+- fade-up-right
+- fade-up-left
+- fade-down-right
+- fade-down-left
+
+### Flips
+
+- flip-up
+- flip-down
+- flip-left
+- flip-right
+
+### Slides
+
+- slide-up
+- slide-down
+- slide-left
+- slide-right
+
+### Zooms
+
+- zoom-in
+- zoom-in-up
+- zoom-in-down
+- zoom-in-left
+- zoom-in-right
+- zoom-out
+- zoom-out-up
+- zoom-out-down
+- zoom-out-left
+- zoom-out-right
+
+## Using presets
+
+Simply set the name in the `data-mos` attribute:
+
+```html
+<section data-mos="flip-left">
+  ...
+</section>
+```
+
+## Creating custom presets
+
+You can also create your own presets. See the [API docs](/reference/api/#register-custom-presets) for more details.
+

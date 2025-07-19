@@ -1,0 +1,60 @@
+{
+  "name": "motion-on-scroll",
+  "version": "0.0.1",
+  "description": "Add beautifully designed components to your Astro applications",
+  "license": "MIT",
+  "author": {
+    "name": "boston343",
+    "url": "https://github.com/Boston343"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Boston343/motion-on-scroll.git",
+    "directory": "packages/motion-on-scroll"
+  },
+  "keywords": [
+    "motion-on-scroll",
+    "motion",
+    "animations",
+    "reveal on scroll",
+    "scroll reveal"
+  ],
+  "type": "module",
+  "bin": {
+    "motion-on-scroll": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "mos:link": "pnpm link --global",
+    "mos:unlink": "pnpm rm --global motion-on-scroll",
+    "typecheck": "tsc --noEmit",
+    "format": "eslint . --fix && prettier --write . --ignore-unknown --cache --ignore-path ../../.prettierignore",
+    "format:check": "eslint . && prettier --check . --ignore-path ../../.prettierignore",
+    "publish:beta": "pnpm publish --tag beta --access public",
+    "publish:next": "pnpm publish --tag next --access public",
+    "publish:release": "pnpm publish --access public",
+    "changeset": "changeset",
+    "local:release": "changeset version && changeset publish",
+    "prepublishOnly": "pnpm ci"
+  },
+  "dependencies": {
+    "motion": "^12.23.3"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^21.1.7",
+    "@vitest/coverage-v8": "^3.2.4",
+    "jsdom": "^26.1.0",
+    "tsup": "8.5.0",
+    "vitest": "^3.2.4",
+    "lightningcss-cli": "^1.24.0"
+  },
+  "engines": {
+    "node": "^20.6.0 || >=22.0.0"
+  }
+}

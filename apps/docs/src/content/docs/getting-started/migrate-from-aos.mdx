@@ -1,0 +1,108 @@
+---
+title: Migrate from AOS
+description: A step-by-step guide for switching your project from AOS to Motion-On-Scroll.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+MOS is API-compatible with AOS where practical. In many cases you only need to swap the script and CSS imports, and rename attributes.
+
+## 1. Install MOS and remove AOS
+
+<Tabs syncKey="pm">
+  <TabItem label="npm">
+
+```bash
+npm uninstall aos
+npm install motion-on-scroll
+```
+  </TabItem>
+  <TabItem label="pnpm">
+
+```bash
+pnpm remove aos
+pnpm add motion-on-scroll
+```
+  </TabItem>
+  <TabItem label="yarn">
+
+```bash
+yarn remove aos
+yarn add motion-on-scroll
+```
+  </TabItem>
+</Tabs>
+
+## 2. Replace the script and CSS import
+
+<Tabs syncKey="framework">
+  <TabItem label="Before (AOS)">
+
+```html
+<link rel="stylesheet" href="bower_components/aos/dist/aos.css" />
+
+<script type="module">
+  import { AOS } from 'aos';
+  AOS.init({
+    duration: 600,
+    once: true
+  });
+</script>
+```
+  </TabItem>
+  <TabItem label="After (MOS)">
+
+```html
+<link rel="stylesheet" href="https://unpkg.com/motion-on-scroll/dist/mos.css" />
+
+<script type="module">
+  import { MOS } from 'motion-on-scroll';
+  MOS.init({
+    duration: 600,
+    once: true
+  });
+</script>
+```
+  </TabItem>
+</Tabs>
+
+## 3. Rename data attributes
+
+<Aside>
+  The easiest way to migrate attributes is to use a find-and-replace to replace all `data-aos-` with `data-mos-`
+</Aside>
+
+| AOS               | MOS                  | Notes                                   |
+| ----------------- | -------------------- | --------------------------------------- |
+| `data-aos`        | `data-mos`           | Animation preset name                   |
+| `data-aos-offset` | `data-mos-offset`    | Positive number in **px**               |
+| `data-aos-delay`  | `data-mos-delay`     | **ms**                                  |
+| `data-aos-duration` | `data-mos-duration` | **ms**                                  |
+| `data-aos-easing` | `data-mos-easing`    | Any CSS easing or spring()              |
+| `data-aos-anchor` | `data-mos-anchor`    | New trigger for animation                       |
+| `data-aos-anchor-placement` | `data-mos-anchor-placement` | 9 keyword combos |
+| `data-aos-once`   | `data-mos-once`      | Boolean                                 |
+
+## 4. Global options equivalence
+
+| AOS option | MOS option | Default |
+| ---------- | ---------- | ------- |
+| `offset`   | `offset`   | `120`   |
+| `duration` | `duration` | `400`   |
+| `delay`    | `delay`    | `0`     |
+| `easing`   | `easing`   | `'ease'`|
+| `once`     | `once`     | `false` |
+| `disable`  | `disable`  | `false` |
+
+## 5. Script removal
+
+In AOS, you needed to call `AOS.refresh` in order to recalculate element positions whenever you dynamically loaded data, or it was auto automatically called on window resize. Because MOS uses motion's `inView` function which leverages the browser's native Intersection Observer API, it doesn't need this. This means you can remove any `AOS.refresh()` calls all-together.
+
+If you dynamically load MOS in SPA routers and disable the mutation observer, replace any `AOS.refreshHard()` calls with `MOS.refreshHard()`.
+
+## 6. Verify animation presets
+
+MOS ships all of the AOS presets. Any custom animations can be replicated by [registering custom presets](/reference/api/#register-custom-presets). 
+
+You’re done! Your site now enjoys GPU-accelerated, browser-native scroll animations—Motion uses the Web Animations API when possible, and gracefully falls back to JavaScript (`requestAnimationFrame`) for values WAAPI can’t handle.

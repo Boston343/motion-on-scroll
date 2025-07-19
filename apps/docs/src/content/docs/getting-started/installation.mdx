@@ -1,0 +1,122 @@
+---
+title: Installation
+description: Install Motion-On-Scroll and add it to your site.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+## Install
+
+<Tabs syncKey="pm">
+  <TabItem label="npm">
+
+```bash
+npm install motion-on-scroll
+```
+  </TabItem>
+  <TabItem label="pnpm">
+
+```bash
+pnpm add motion-on-scroll
+```
+  </TabItem>
+  <TabItem label="yarn">
+
+```bash
+yarn add motion-on-scroll
+```
+  </TabItem>
+</Tabs>
+
+<Aside>
+  Motion-On-Scroll (MOS) depends only on the <a target="_blank" rel="noopener noreferrer" href="https://motion.dev/">motion</a> package for its `inView` and `animate` helpers.
+</Aside>
+
+## Minimal bootstrapping
+
+You'll need to import MOS styles, and run the `MOS.init()` function.
+
+
+<Tabs>
+  <TabItem label="Vanilla JS">
+
+```html
+<!-- Import MOS styles -->
+<link rel="stylesheet" href="https://unpkg.com/motion-on-scroll/dist/mos.css" />
+
+<!-- Initialize MOS -->
+<script type="module">
+  import { MOS } from 'motion-on-scroll';
+  MOS.init();
+</script>
+
+<!-- Somewhere in your markup -->
+<section data-mos="fade-up">
+  ...
+</section>
+```
+  </TabItem>
+  <TabItem label="Astro">
+
+```astro
+---
+import 'motion-on-scroll/dist/mos.css';
+---
+<html lang="en">
+  <head>
+    ...
+  </head>
+  <body>
+    <section data-mos="fade-up">
+      ...
+    </section>
+
+    <script>
+      import { MOS } from 'motion-on-scroll';
+      MOS.init();
+    </script>
+  </body>
+</html>
+```
+  </TabItem>
+</Tabs>
+
+That’s it! Every element declaring a `data-mos` value is now animated when it enters the viewport.
+
+### CSS file
+
+MOS ships with a small stylesheet that ensures elements are hidden upon initial page load. Import it from `motion-on-scroll/dist/mos.css` or copy the file into your own pipeline. The contents of the file are copied below for convenience.
+
+```css
+/* no pointer events until animation starts */
+[data-mos] {
+  pointer-events: none;
+}
+
+[data-mos].mos-animate {
+  pointer-events: auto;
+}
+
+/* fade & zoom presets */
+[data-mos^="fade"],
+[data-mos^="zoom"] {
+  will-change: opacity, transform;
+  opacity: 0;
+}
+
+/* slide presets */
+[data-mos^="slide"] {
+  will-change: transform;
+  visibility: hidden;
+}
+[data-mos^="slide"].mos-animate {
+  visibility: visible;
+}
+
+/* flip presets */
+[data-mos^="flip"] {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+```

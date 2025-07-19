@@ -1,0 +1,278 @@
+---
+title: JavaScript API
+description: Programmatic entry-points exposed by Motion-On-Scroll.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## init()
+
+`init(options?)`
+
+Initialises observers for every element possessing `data-mos`. Call this once on page load. It’s idempotent—calling it again merges new defaults and refreshes observation.
+
+```ts
+import { MOS } from 'motion-on-scroll';
+
+MOS.init({
+  offset: 200,
+  duration: 600,
+  easing: 'ease-out',
+  once: true
+});
+```
+
+### Options
+
+#### offset
+
+*Type*: `number` (pixels)  
+*Default*: `120`
+
+Additional distance (in pixels) before an element is considered *in view* (applied via `rootMargin`).
+
+#### duration
+
+*Type*: `number` (ms)  
+*Default*: `400`
+
+Animation duration. (MOS uses the browser’s **Web Animations API** where possible.)
+
+#### delay
+
+*Type*: `number` (ms)  
+*Default*: `0`
+
+Delay before the animation starts.
+
+#### distance
+
+*Type*: `number` (pixels)  
+*Default*: `24`
+
+Travel distance for directional presets like `fade-up`.
+
+#### easing
+
+*Type*: `string`  
+*Default*: `'ease'`
+
+Supports any of these predefined keywords:
+
+- `linear`, `ease`
+- `ease-in`, `ease-out`, `ease-in-out`
+- `circ-in`, `circ-out`, `circ-in-out`
+- `back-in`, `back-out`, `back-in-out`, `anticipate`
+- `ease-in-back`, `ease-out-back`, `ease-in-out-back`
+- `ease-in-sine`, `ease-out-sine`, `ease-in-out-sine`
+- `ease-in-quad`, `ease-out-quad`, `ease-in-out-quad`
+- `ease-in-cubic`, `ease-out-cubic`, `ease-in-out-cubic`
+- `ease-in-quart`, `ease-out-quart`, `ease-in-out-quart`
+
+You can also pass a custom cubic-bezier string in any of the following formats:
+
+- `cubic-bezier(x1, y1, x2, y2)`
+- `[x1,y1,x2,y2]` or `x1,y1,x2,y2`
+
+Need something else? Define a custom easing preset with [`MOS.registerEasing`](#registereasingname-definition) and use it in your presets.
+
+#### once
+
+*Type*: `boolean`  
+*Default*: `false`
+
+Play only once, then unobserve the element.
+
+#### disable
+
+*Type*: `boolean | 'mobile' | 'phone' | 'tablet' | (() => boolean)`  
+*Default*: `false`
+
+Disable animations entirely under specific conditions (e.g. on mobile).
+
+#### disableMutationObserver
+ 
+*Type*: `boolean`  
+*Default*: `false`
+
+Skip the automatic `MutationObserver` (useful when you manage DOM changes manually). 
+
+<Aside>
+  <strong>Hybrid engine.</strong> Motion automatically chooses the most performant path:
+  it runs animations with the browser-native <em>Web Animations API</em> whenever the animated value is supported, and falls back to JavaScript (`requestAnimationFrame`) when it isn’t. Either way, MOS abstracts this detail—you use the same API.
+</Aside>
+
+## refreshHard()
+
+Re-evaluates the DOM for all `data-mos` elements and re-attaches observers using the last supplied global options. Useful after client-side navigation or significant DOM changes. This is internally called automatically when DOM changes are detected, unless you disable the mutation observer.
+
+## Register Custom Presets
+
+Functions are exposed to allow you to register custom keyframes, easings, or even whole animations for complex use cases.
+
+<Aside type="caution">
+  You should register any custom presets **before** calling `MOS.init()`.
+</Aside>
+
+### registerKeyframes()
+
+`registerKeyframes(name, definition)`
+
+Registers custom keyframes that can subsequently be referenced via the `data-mos` attribute.
+
+```ts
+import { MOS } from 'motion-on-scroll';
+
+MOS.registerKeyframes("my-custom-animation", {
+  opacity: [0, 1],
+  rotate: [0, 360],
+});
+
+// initialize MOS after registering keyframes
+MOS.init();
+```
+
+```astro
+<!-- somewhere in html -->
+<div data-mos="my-custom-animation"></div>
+```
+
+#### name
+
+*Type*: `string`  
+Unique identifier (case-sensitive). Must be non-empty and cannot collide with existing easing keywords.
+
+#### definition
+
+*Type*: `DOMKeyframesDefinition`  
+Any keyframes object accepted by [motion's animate function](https://motion.dev/docs/animate).
+
+### registerEasing()
+
+`registerEasing(name, definition)`
+
+Registers a custom easing that can subsequently be referenced via the `easing` option of `MOS.init()` or within any `data-mos-easing` attribute.
+
+```ts
+import { MOS } from 'motion-on-scroll';
+
+// Register a cubic-bezier array
+MOS.registerEasing('bouncy', [0.68, -0.55, 0.265, 1.55]);
+
+// Register a cubic-bezier string (will be parsed)
+MOS.registerEasing('custom', 'cubic-bezier(0.25, 0.46, 0.45, 0.94)');
+
+// initialize MOS after registering easings
+MOS.init({
+  easing: 'bouncy',
+});
+```
+
+```astro
+<!-- or somewhere in html -->
+<div data-mos="fade-up" data-mos-easing="bouncy"></div>
+```
+
+#### name
+
+*Type*: `string`  
+Unique identifier (case-sensitive). Must be non-empty and cannot collide with existing easing keywords.
+
+#### definition
+
+*Type*: `EasingDefinition | string`  
+Any easing accepted by [Motion](https://motion.dev/docs/easing-functions) — named keyword, cubic-bezier array, or cubic-bezier string.
+
+The function validates the input and throws if the easing cannot be parsed.
+
+### registerAnimation()
+
+`registerAnimation(name, factory)`
+
+Registers a custom animation that can subsequently be referenced via the `data-mos` attribute. This enables you to completely customize the animation logic using [motion's animate function](https://motion.dev/docs/animate).
+
+```ts
+import { MOS } from 'motion-on-scroll';
+import { animate } from "motion";
+
+registerAnimation("bouncy", (el, opts) =>
+  animate(
+    el,
+    { opacity: [0, 1], scale: [0.4, 1] },
+    {
+      type: "spring",
+      bounce: 0.5,
+      duration: opts.timeUnits === "s" ? opts.duration : opts.duration / 1000,
+      delay: opts.timeUnits === "s" ? opts.delay : opts.delay / 1000,
+    },
+  ),
+);
+
+// initialize MOS after registering animation
+MOS.init();
+
+```
+
+```astro
+<!-- somewhere in html -->
+<div data-mos="bouncy"></div>
+```
+
+<Aside>
+  If you happen to name a custom animation the same as existing keyframes, the custom animation will take precedence.
+</Aside>
+
+#### name
+
+*Type*: `string`  
+Unique identifier (case-sensitive). Must be non-empty.
+
+#### factory
+
+*Type*: `(el: HTMLElement, opts: ElementOptions) => AnimationPlaybackControls`  
+A factory function that uses [motion's animate function](https://motion.dev/docs/animate) to create an animation.
+
+`ElementOptions` is an object that contains the merged global options and element-level options. It has the following properties which you can use to enable customizable animations via data attributes on individual elements:
+
+```ts
+interface ElementOptions {
+  /** Additional px distance before an element is considered in view */
+  offset: number;
+  /** Animation duration default */
+  duration: number;
+  /** Delay before starting the animation */
+  delay: number;
+  /** Units for duration and delay ("ms" or "s") */
+  timeUnits: "ms" | "s";
+  /** Travel distance for directional animations in px */
+  distance: number;
+  /** CSS easing string */
+  easing: EasingKeyword | string;
+  /** If true, an element animates only once */
+  once: boolean;
+  /** Disable condition */
+  disable: DeviceDisable;
+  /** If true, automatic DOM MutationObserver is not started */
+  disableMutationObserver: boolean;
+  /** DOM event that triggers MOS to start. Defaults to "DOMContentLoaded" */
+  startEvent: string;
+  /** Preset animation name */
+  keyframes: string;
+  /** Selector of anchor element whose position controls trigger */
+  anchor?: string;
+  /** 9-grid intersection that decides when the animation triggers */
+  anchorPlacement?: AnchorPlacement;
+  /** Direct numeric amount (0–1) passed to inView; overrides anchorPlacement when provided */
+  amount?: number;
+}
+```
+
+## Named exports
+
+motion-on-scroll also exports functions directly:
+
+```ts
+import { init, refreshHard, registerAnimation, registerEasing, registerKeyframes } from 'motion-on-scroll';
+```
+
+They are identical to the namespaced versions.

@@ -1,0 +1,99 @@
+---
+title: Data Attributes
+description: All `data-mos-*` attributes supported by Motion-On-Scroll.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Attribute Overview
+
+### data-mos
+*Type*: `PresetName`  
+*Default*: —  
+
+Preset animation key (e.g. `fade-up`, `zoom-in`).
+
+Need something else? Define custom keyframes with [`MOS.registerKeyframes`](/reference/api/#registerkeyframes), or entire animations with [`MOS.registerAnimation`](/reference/api/#registeranimation) and use it in your presets.
+
+### data-mos-offset
+*Type*: `number` (px)  
+*Default*: value from `offset` passed to `MOS.init` or **120**  
+
+Additional root margin before the element is considered *in view*.
+
+### data-mos-duration
+*Type*: `number` (ms)  
+*Default*: value from `duration` global or **400** 
+
+Animation duration.
+
+### data-mos-delay
+*Type*: `number` (ms)  
+*Default*: value from `delay` global or **0**  
+
+Delay before the animation starts.
+
+### data-mos-easing
+*Type*: `string`  
+*Default*: value from `easing` global or **'ease'**  
+
+Supports any of these predefined keywords:
+
+- `linear`, `ease`
+- `ease-in`, `ease-out`, `ease-in-out`
+- `circ-in`, `circ-out`, `circ-in-out`
+- `back-in`, `back-out`, `back-in-out`, `anticipate`
+- `ease-in-back`, `ease-out-back`, `ease-in-out-back`
+- `ease-in-sine`, `ease-out-sine`, `ease-in-out-sine`
+- `ease-in-quad`, `ease-out-quad`, `ease-in-out-quad`
+- `ease-in-cubic`, `ease-out-cubic`, `ease-in-out-cubic`
+- `ease-in-quart`, `ease-out-quart`, `ease-in-out-quart`
+
+You can also pass a custom cubic-bezier string in any of the following formats:
+
+- `cubic-bezier(x1, y1, x2, y2)`
+- `[x1,y1,x2,y2]` or `x1,y1,x2,y2`
+
+Need something else? Define a custom easing preset with [`MOS.registerEasing`](/reference/api/#registereasing) and use it in your presets.
+
+### data-mos-once
+*Type*: `boolean`  
+*Default*: value from `once` global or **false**  
+
+Play only once then unobserve.
+
+### data-mos-anchor
+*Type*: `CSSSelector`  
+*Default*: —  
+
+Observe a *different* element; animation still runs on the target.
+
+### data-mos-anchor-placement
+*Type*: placement keyword  
+*Default*: **top-bottom**  
+
+One of the nine combinations below:
+
+`top-top`, `top-center`, `top-bottom`, `center-top`, `center-center`, `center-bottom`, `bottom-top`, `bottom-center`, `bottom-bottom`.
+
+Use these to describe which part of the *anchor* meets which part of the *target* when deciding the trigger point.
+
+<Aside>
+  This is included for parity with AOS, but MOS also supports `data-mos-amount` for more fine-grained control.
+</Aside>
+
+### data-mos-amount
+*Type*: `number` (0–1)  
+*Default*: —  
+
+Numeric override (0–1) passed directly to `inView` and takes precedence over `data-mos-anchor-placement`. Useful for fine-grained control. `0` represents when "some" of an element enters the viewport, and `1` represents when the entire element is inside the viewport.
+
+## Element vs Global precedence
+
+Values resolve in the following order (highest first):
+
+1. Element-level `data-mos-*`
+2. Options passed to `MOS.init()`
+3. Library defaults
+
+This allows for broad theming with surgical per-element tweaks.
