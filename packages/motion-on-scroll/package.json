@@ -1,6 +1,6 @@
 {
   "name": "motion-on-scroll",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Effortless, AOS-compatible scroll animations powered by Motion",
   "license": "MIT",
   "author": {
@@ -22,8 +22,14 @@
     "aos"
   ],
   "type": "module",
-  "bin": {
-    "motion-on-scroll": "./dist/index.js"
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./dist/*": "./dist/*"
   },
   "files": [
     "dist"
