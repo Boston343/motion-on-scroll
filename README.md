@@ -6,16 +6,16 @@ Effortless, AOS-compatible scroll animations powered by [Motion](https://motion.
 
 Framework-agnostic, MOS lets you add scroll-triggered animations with nothing but `data-mos` attributes. Under the hood it uses Motion’s powerful `inView` + `animate` APIs, giving you:
 
-• 27 preset effects out of the box
-• Support for custom keyframes, easings, and fully bespoke timelines
-• AOS-compatible features for painless migration
-• First-class TypeScript types
+- 27 preset effects out of the box
+- Support for custom keyframes, easings, and fully bespoke timelines
+- AOS-compatible features for painless migration
+- First-class TypeScript types
 
 > 📚 **Full docs → [motion-on-scroll.pages.dev](https://motion-on-scroll.pages.dev)**
 
 ---
 
-## Quick&nbsp;start
+## Quick start
 
 ```bash
 npm i motion-on-scroll
