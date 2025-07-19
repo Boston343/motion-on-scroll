@@ -43,7 +43,8 @@
     "publish:release": "pnpm publish --access public",
     "changeset": "changeset",
     "local:release": "changeset version && changeset publish",
-    "prepublishOnly": "pnpm ci"
+    "ci": "pnpm build && pnpm format:check && pnpm test",
+    "prepublishOnly": "pnpm run ci"
   },
   "dependencies": {
     "motion": "^12.23.3"
