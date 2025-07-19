@@ -11,7 +11,7 @@ Framework-agnostic, MOS lets you add scroll-triggered animations with nothing bu
 • AOS-compatible features for painless migration
 • First-class TypeScript types
 
-> 📚 **Full docs → [motion-on-scroll.dev](https://motion-on-scroll.dev)**
+> 📚 **Full docs → [motion-on-scroll.pages.dev](https://motion-on-scroll.pages.dev)**
 
 ---
 
@@ -35,7 +35,7 @@ npm i motion-on-scroll
 <div data-mos="fade-up">Hello world</div>
 ```
 
-**Migrating from AOS?** Check the guide → <https://motion-on-scroll.dev/getting-started/migrate-from-aos>
+**Migrating from AOS?** Check the guide → <https://motion-on-scroll.pages.dev/getting-started/migrate-from-aos>
 
 ---
 
