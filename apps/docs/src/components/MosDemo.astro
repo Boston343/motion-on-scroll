@@ -1,0 +1,130 @@
+---
+const animationSections = [
+  {
+    title: "Fade Animations",
+    animations: [
+      "fade",
+      "fade-up",
+      "fade-down",
+      "fade-left",
+      "fade-right",
+      "fade-up-right",
+      "fade-up-left",
+      "fade-down-right",
+      "fade-down-left",
+    ],
+    colorClasses: "from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-500",
+  },
+  {
+    title: "Flip Animations",
+    animations: ["flip-up", "flip-down", "flip-left", "flip-right"],
+    colorClasses: "from-pink-500 to-rose-600 dark:from-pink-400 dark:to-rose-500",
+  },
+  {
+    title: "Slide Animations",
+    animations: ["slide-up", "slide-down", "slide-left", "slide-right"],
+    colorClasses: "from-blue-500 to-cyan-600 dark:from-blue-400 dark:to-cyan-500",
+  },
+  {
+    title: "Zoom Animations",
+    animations: [
+      "zoom-in",
+      "zoom-in-up",
+      "zoom-in-down",
+      "zoom-in-left",
+      "zoom-in-right",
+      "zoom-out",
+      "zoom-out-up",
+      "zoom-out-down",
+      "zoom-out-left",
+      "zoom-out-right",
+    ],
+    colorClasses: "from-green-500 to-emerald-600 dark:from-green-400 dark:to-emerald-500",
+  },
+];
+---
+
+<div class="not-content mx-auto max-w-5xl p-8">
+  <h1 class="mb-12 text-center text-4xl font-bold text-gray-900 dark:text-gray-100">
+    Motion on Scroll Animations Demo
+  </h1>
+
+  <div class="space-y-24">
+    {
+      animationSections.map((section) => {
+        let itemIndex = 0;
+        return (
+          <div class="space-y-8">
+            <h2 class="text-center text-3xl font-semibold text-gray-800 md:col-span-2 dark:text-gray-200">
+              {section.title}
+            </h2>
+
+            <div class="space-y-8">
+              {section.animations.map((animation) => {
+                const isLeft = itemIndex % 2 === 0;
+                itemIndex++;
+                return (
+                  <div
+                    class={`flex ${
+                      isLeft ? "justify-start md:justify-start" : "justify-end md:justify-end"
+                    }`}
+                  >
+                    <div
+                      class={`bg-gradient-to-br ${section.colorClasses} min-w-[200px] rounded-xl px-8 py-6 text-center font-semibold text-white shadow-xl`}
+                      data-mos={animation}
+                    >
+                      {animation}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })
+    }
+  </div>
+</div>
+
+<script>
+  import { MOS } from "motion-on-scroll";
+
+  MOS.init({
+    easing: "ease-out-cubic",
+    duration: 800,
+    offset: 50,
+    once: false, // Allow animations to repeat when scrolling back up
+  });
+</script>
+
+<style>
+  /* MOS default visibility helpers – prevents initial flash of un-animated elements */
+
+  /* no pointer events until animation starts */
+  [data-mos] {
+    pointer-events: none;
+  }
+
+  [data-mos].mos-animate {
+    pointer-events: auto;
+  }
+
+  /* fade & zoom presets */
+  [data-mos^="fade"],
+  [data-mos^="zoom"] {
+    will-change: opacity, transform;
+    opacity: 0;
+  }
+
+  /* slide presets */
+  [data-mos^="slide"] {
+    will-change: transform;
+  }
+
+  /* flip presets */
+  [data-mos^="flip"] {
+    will-change: transform;
+    transform: rotateY(-180deg);
+    backface-visibility: hidden;
+  }
+</style>
