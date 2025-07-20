@@ -59,7 +59,7 @@ const animationSections = [
               {section.title}
             </h2>
 
-            <div class="space-y-8">
+            <div class="space-y-20">
               {section.animations.map((animation) => {
                 const isLeft = itemIndex % 2 === 0;
                 itemIndex++;
@@ -70,7 +70,7 @@ const animationSections = [
                     }`}
                   >
                     <div
-                      class={`bg-gradient-to-br ${section.colorClasses} min-w-[200px] rounded-xl px-8 py-6 text-center font-semibold text-white shadow-xl`}
+                      class={`bg-gradient-to-br ${section.colorClasses} min-w-[200px] rounded-xl px-8 py-10 text-center font-semibold text-white shadow-xl`}
                       data-mos={animation}
                     >
                       {animation}
