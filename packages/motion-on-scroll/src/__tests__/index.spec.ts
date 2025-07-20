@@ -6,7 +6,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 const freshIndex = async () => {
   vi.resetModules();
   // re-apply mocks after reset so fresh modules get spied versions
-  vi.doMock("../helpers/observer", () => ({
+  vi.doMock("../index", () => ({
     observeElement: vi.fn(),
   }));
   vi.doMock("../helpers/attributes", () => ({

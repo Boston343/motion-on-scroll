@@ -13,7 +13,7 @@ vi.mock("../helpers/animations", () => {
 
 import * as animations from "../helpers/animations.js";
 import { DEFAULT_OPTIONS } from "../helpers/constants.js";
-import { observeElement } from "../helpers/observer.js";
+import { observeElement } from "../index.js";
 
 // Cast mocked exports with correct types
 const { play: playSpy, reset: resetSpy } = vi.mocked(animations);

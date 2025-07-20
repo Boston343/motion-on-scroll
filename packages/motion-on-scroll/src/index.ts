@@ -3,18 +3,31 @@ import { resolveElementOptions } from "./helpers/attributes.js";
 import { DEFAULT_OPTIONS } from "./helpers/constants.js";
 import { registerEasing } from "./helpers/easing.js";
 import { registerKeyframes } from "./helpers/keyframes.js";
-import { observeElement } from "./helpers/observer.js";
 import {
   cleanupScrollHandler,
+  observeElement as observeElementWithScrollHandler,
   refreshElements,
   updateScrollHandlerDelays,
 } from "./helpers/scroll-handler.js";
 import { initScrollTracker, updateScrollTrackerDelay } from "./helpers/scroll-tracker.js";
-import type { PartialMosOptions } from "./helpers/types.js";
+import type { ElementOptions, PartialMosOptions } from "./helpers/types.js";
 import { debounce, isDisabled, removeMosAttributes } from "./helpers/utils.js";
 
 // Track elements already observed to avoid duplicate observations
 const _observedEls = new WeakSet<HTMLElement>();
+
+/**
+ * Observe an element using custom AOS-style scroll detection
+ * This replaces Motion's inView with direct scroll event handling
+ */
+function observeElement(el: HTMLElement, opts: ElementOptions) {
+  if (isDisabled(opts.disable)) {
+    return; // Skip observing entirely when disabled
+  }
+
+  // Use the custom scroll handler instead of Motion's inView
+  observeElementWithScrollHandler(el, opts);
+}
 function observeOnce(el: HTMLElement, opts: Parameters<typeof observeElement>[1]) {
   if (_observedEls.has(el)) return;
   _observedEls.add(el);

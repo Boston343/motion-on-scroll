@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 // Utility to import a fresh copy of index.ts with mocks applied
 const freshIndex = async () => {
   vi.resetModules();
-  vi.doMock("../helpers/observer", () => ({ observeElement: vi.fn() }));
+  vi.doMock("../index", () => ({ observeElement: vi.fn() }));
   vi.doMock("../helpers/attributes", () => ({ resolveElementOptions: vi.fn() }));
   vi.doMock("../helpers/utils", () => ({
     isDisabled: vi.fn(() => true), // default disabled
@@ -26,7 +26,7 @@ describe("bootstrap early-exit when disabled", () => {
 
     const { MOS } = await freshIndex();
     const utils = await import("../helpers/utils.js");
-    const observer = await import("../helpers/observer.js");
+    const observer = await import("../index.js");
 
     MOS.init({ disable: true } as any);
 

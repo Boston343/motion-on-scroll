@@ -1,4 +1,4 @@
-import { animate, AnimationPlaybackControls, type KeyframeOptions } from "motion";
+import { animate, type AnimationPlaybackControls, type KeyframeOptions } from "motion";
 
 import { DEFAULT_OPTIONS } from "./constants.js";
 import { resolveEasing } from "./easing.js";
