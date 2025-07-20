@@ -141,37 +141,6 @@ export function startDomObserver(): void {
 }
 
 // ===================================================================
-// LIBRARY LIFECYCLE MANAGEMENT
-// ===================================================================
-
-/**
- * Refreshes the library state and re-processes all elements
- * @param shouldActivate - Whether this refresh should activate the library
- */
-function refresh(shouldActivate = false): void {
-  if (shouldActivate) isLibraryActive = true;
-  if (isLibraryActive) initializeScrollSystem();
-}
-
-/**
- * Performs a hard refresh - completely resets and re-initializes the library
- * Useful when the DOM structure has changed significantly
- */
-function refreshHard(): void {
-  // Handle global disable - clean up and exit early
-  if (isDisabled(libraryConfig.disable ?? false)) {
-    findMosElements().forEach(removeMosAttributes);
-    return;
-  }
-
-  // Clean up existing scroll handlers
-  cleanupScrollHandler();
-
-  // Re-initialize everything
-  refresh(true);
-}
-
-// ===================================================================
 // CONFIGURATION AND TIME UNITS
 // ===================================================================
 
@@ -229,6 +198,8 @@ export function setupStartEventListener(): void {
   } else {
     document.addEventListener(startEvent, () => refresh(true), { once: true });
   }
+
+  startDomObserver();
 }
 
 // ===================================================================
@@ -265,6 +236,33 @@ function init(options: PartialMosOptions = {}): HTMLElement[] {
 
   // Return current elements for compatibility
   return findMosElements();
+}
+
+/**
+ * Refreshes the library state and re-processes all elements
+ * @param shouldActivate - Whether this refresh should activate the library
+ */
+function refresh(shouldActivate = false): void {
+  if (shouldActivate) isLibraryActive = true;
+  if (isLibraryActive) initializeScrollSystem();
+}
+
+/**
+ * Performs a hard refresh - completely resets and re-initializes the library
+ * Useful when the DOM structure has changed significantly
+ */
+function refreshHard(): void {
+  // Handle global disable - clean up and exit early
+  if (isDisabled(libraryConfig.disable ?? false)) {
+    findMosElements().forEach(removeMosAttributes);
+    return;
+  }
+
+  // Clean up existing scroll handlers
+  cleanupScrollHandler();
+
+  // Re-initialize everything
+  refresh(true);
 }
 
 // ===================================================================

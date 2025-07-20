@@ -4,6 +4,28 @@
 
 import type { EasingKeyword } from "./constants.js";
 
+/**
+ * Represents an element being tracked for scroll-based animations
+ * Contains all state and configuration needed for animation decisions
+ */
+export interface MosElement {
+  /** The DOM element being animated */
+  element: HTMLElement;
+  /** Animation configuration options */
+  options: ElementOptions;
+  /** Scroll positions that trigger animations */
+  position: {
+    /** Scroll position where element should animate in */
+    in: number;
+    /** Scroll position where element should animate out (false if disabled) */
+    out: number | false;
+  };
+  /** Whether the element has been animated */
+  animated: boolean;
+  /** Whether the element is currently reversing its animation */
+  isReversing: boolean;
+}
+
 export type DeviceDisable = boolean | "mobile" | "phone" | "tablet" | (() => boolean);
 
 export interface MosOptions {
