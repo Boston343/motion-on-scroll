@@ -25,13 +25,13 @@
 import debounce from "lodash.debounce";
 import throttle from "lodash.throttle";
 
-import { type AOSDefaultOptions, type AOSElement } from "./helpers/aosTypes";
-import detect from "./helpers/detector";
-import elements from "./helpers/elements";
-import handleScroll from "./helpers/handleScroll";
-import { getPositionIn, getPositionOut } from "./helpers/offsetCalculator";
-import prepare from "./helpers/prepare";
-import observer from "./libs/observer";
+import { type AOSDefaultOptions, type AOSElement } from "./helpers/aosTypes.js";
+import detect from "./helpers/detector.js";
+import elements from "./helpers/elements.js";
+import handleScroll from "./helpers/handleScroll.js";
+import { getPositionIn, getPositionOut } from "./helpers/offsetCalculator.js";
+import prepare from "./helpers/prepare.js";
+import observer from "./libs/observer.js";
 
 /**
  * Private variables

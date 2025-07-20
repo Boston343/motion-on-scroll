@@ -1,4 +1,4 @@
-import { type AOSElement } from "./aosTypes";
+import { type AOSElement } from "./aosTypes.js";
 
 /**
  * Adds multiple classes on node

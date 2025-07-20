@@ -1,10 +1,10 @@
 /* Clearing variables */
 
 // Scroll animations
-import { getAnimation } from "../anime/animations";
-import { type AOSDefaultOptions, type AOSElement } from "./aosTypes";
-import getInlineOption from "./getInlineOption";
-import { getPositionIn, getPositionOut } from "./offsetCalculator";
+import { getAnimation } from "../anime/animations.js";
+import { type AOSDefaultOptions, type AOSElement } from "./aosTypes.js";
+import getInlineOption from "./getInlineOption.js";
+import { getPositionIn, getPositionOut } from "./offsetCalculator.js";
 
 const prepare = function (aosElements: AOSElement[], options: AOSDefaultOptions): AOSElement[] {
   aosElements.forEach((el) => {

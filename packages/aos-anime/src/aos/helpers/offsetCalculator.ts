@@ -5,9 +5,9 @@
  * - offset
  */
 
-import getOffset from "../libs/offset";
-import { type TriggerPlacement } from "./aosTypes";
-import getInlineOption from "./getInlineOption";
+import getOffset from "../libs/offset.js";
+import { type TriggerPlacement } from "./aosTypes.js";
+import getInlineOption from "./getInlineOption.js";
 
 // returns the final offset that will be used to trigger animation in good position
 export const getPositionIn = (

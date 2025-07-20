@@ -3,7 +3,7 @@
  * This array will be extended later with elements attributes values
  * like 'position', 'animation', 'options' etc.
  */
-import { type AOSElement } from "./aosTypes";
+import { type AOSElement } from "./aosTypes.js";
 
 export default (): AOSElement[] => {
   const elements = document.querySelectorAll("[data-aos]");
