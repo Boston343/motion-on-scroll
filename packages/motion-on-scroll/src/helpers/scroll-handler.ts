@@ -84,47 +84,22 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
     elementData.isReversing = false;
   };
 
-  // Apply AOS-like animation logic based on scroll position
-  if (shouldHideElement(elementData, scrollY)) {
+  if (
+    options.mirror &&
+    position.out !== undefined &&
+    position.out !== false &&
+    scrollY >= position.out &&
+    !options.once
+  ) {
     hideElement();
-  } else if (shouldShowElement(elementData, scrollY)) {
+  } else if (position.in !== undefined && scrollY >= position.in) {
+    // console.log("showElement", elementData, scrollY);
+    console.log("scrollY", scrollY);
+    console.log("position.in", position.in);
     showElement();
+  } else if (elementData.animated && !options.once) {
+    hideElement();
   }
-}
-
-/**
- * Determines if an element should be hidden based on scroll position
- * @param elementData - The element data containing state and configuration
- * @param scrollY - Current vertical scroll position
- * @returns True if element should be hidden
- */
-function shouldHideElement(elementData: MosElement, scrollY: number): boolean {
-  const { options, position } = elementData;
-
-  // Hide if past exit point and mirror is enabled
-  if (options.mirror && position.out !== false && scrollY >= position.out && !options.once) {
-    return true;
-  }
-
-  // Hide if before entry point, was previously animated, and not set to animate once
-  if (elementData.animated && scrollY < position.in && !options.once) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Determines if an element should be shown based on scroll position
- * @param elementData - The element data containing state and configuration
- * @param scrollY - Current vertical scroll position
- * @returns True if element should be shown
- */
-function shouldShowElement(elementData: MosElement, scrollY: number): boolean {
-  const { position } = elementData;
-
-  // Show if scroll position has reached the element's entry point
-  return scrollY >= position.in;
 }
 
 // ===================================================================
@@ -316,9 +291,6 @@ function ensureScrollHandlerActive(): void {
   // Store references for cleanup
   activeScrollHandler = throttledScrollHandler;
   activeResizeHandler = debouncedPositionRecalculator;
-
-  // Process current scroll position immediately
-  processScrollEvent();
 }
 
 /**
