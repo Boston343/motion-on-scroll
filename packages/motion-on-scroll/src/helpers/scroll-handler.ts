@@ -28,50 +28,42 @@ let currentThrottleDelay = DEFAULT_OPTIONS.throttleDelay;
 let currentDebounceDelay = DEFAULT_OPTIONS.debounceDelay;
 
 /**
- * Apply animation state based on scroll position
+ * Apply animation state based on scroll position (AOS-like logic)
  */
 function applyAnimationState(mosEl: MosElement, scrollY: number): void {
   const { element, options, position } = mosEl;
-  const scrollDirection = getScrollDirection();
 
   const hide = () => {
+    if (!mosEl.animated) return;
     console.log("Hiding element (reverse):", element);
-    reverse(element);
-    mosEl.animated = false;
+    reverse(element, () => {
+      // Callback: sync scroll handler state when reverse completes
+      mosEl.animated = false;
+      mosEl.isReversing = false;
+    });
+    // Keep animated = true during reverse for smooth transition
     mosEl.isReversing = true;
   };
 
   const show = () => {
+    if (mosEl.animated && !mosEl.isReversing) return;
+    
     console.log("Showing element (play):", element);
     play(element, options);
     mosEl.animated = true;
     mosEl.isReversing = false;
   };
 
-  // Determine if element is in viewport range
-  const isInViewport = scrollY >= position.in;
-  const isPastExitPoint = position.out !== false && scrollY >= position.out;
-
-  // Handle scroll down behavior
-  if (scrollDirection === "down") {
-    // Show element when scrolling down and entering viewport
-    if (isInViewport && (!mosEl.animated || mosEl.isReversing)) {
-      show();
-    }
-  }
-  // Handle scroll up behavior
-  else if (scrollDirection === "up") {
-    // Only hide element if:
-    // 1. It's currently animated (was shown)
-    // 2. We're not in "once" mode
-    // 3. We've scrolled up past the entry point (element exiting at bottom)
-    if (mosEl.animated && !options.once && !isInViewport) {
-      hide();
-    }
-    // OR if we have an explicit exit point and we've passed it while scrolling up
-    else if (mosEl.animated && !options.once && isPastExitPoint) {
-      hide();
-    }
+  // AOS-like logic: mirror functionality with proper viewport handling
+  if (options.mirror && position.out !== false && scrollY >= position.out && !options.once) {
+    // Element is past its exit point and mirror is enabled
+    hide();
+  } else if (scrollY >= position.in) {
+    // Element has reached its entry point
+    show();
+  } else if (mosEl.animated && !options.once) {
+    // Element is before its entry point and was previously animated
+    hide();
   }
 }
 
@@ -90,23 +82,28 @@ function prepareElements(): void {
   mosElements.forEach((mosEl) => {
     const { element, options } = mosEl;
 
-    // Calculate trigger positions based on natural element position
+    // Calculate trigger positions based on natural element position (AOS-like)
     mosEl.position = {
       in: getPositionIn(element, options),
-      out: !options.once ? getPositionOut(element, options) : false,
+      out: options.mirror && !options.once ? getPositionOut(element, options) : false,
     };
 
-    // Set initial state based on element position
+    // Set initial state based on element position (AOS-like)
     if (isElementAboveViewport(element)) {
+      // Element is above viewport - set to final state immediately
       setFinalState(element, options);
       mosEl.animated = true;
     } else {
+      // Element is in or below viewport - set to initial state
       setInitialState(element, options);
       mosEl.animated = false;
     }
 
     mosEl.isReversing = false;
   });
+
+  // After preparing all elements, trigger scroll handler to animate elements currently in viewport
+  handleScroll();
 }
 
 /**
@@ -117,7 +114,7 @@ function recalculatePositions(): void {
     const { element, options } = mosEl;
     mosEl.position = {
       in: getPositionIn(element, options),
-      out: !options.once ? getPositionOut(element, options) : false,
+      out: options.mirror && !options.once ? getPositionOut(element, options) : false,
     };
   });
 
@@ -147,7 +144,8 @@ export function observeElement(element: HTMLElement, options: ElementOptions): v
   const existingIndex = mosElements.findIndex((mosEl) => mosEl.element === element);
   if (existingIndex !== -1) {
     // Update existing element options
-    mosElements[existingIndex].options = options;
+    const existingElement = mosElements[existingIndex]!; // Non-null assertion since we know it exists
+    existingElement.options = options;
   } else {
     // Add new element
     mosElements.push({
@@ -161,9 +159,6 @@ export function observeElement(element: HTMLElement, options: ElementOptions): v
 
   // Initialize scroll handler if not already done
   initializeScrollHandler();
-
-  // Prepare this element
-  prepareElements();
 }
 
 /**

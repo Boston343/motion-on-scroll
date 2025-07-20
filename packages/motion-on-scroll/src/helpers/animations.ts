@@ -33,27 +33,47 @@ export function registerAnimation(name: string, factory: AnimationFactory): void
 }
 
 /**
+ * Ensure animation controls exist for an element (create only once)
+ */
+function ensureAnimation(el: HTMLElement, opts: ElementOptions): AnimationPlaybackControls | null {
+  const existingState = elementStates.get(el);
+  if (existingState?.controls) {
+    return existingState.controls;
+  }
+
+  const controls = createAnimation(el, opts);
+  if (!controls) return null;
+
+  // Store state with new controls
+  elementStates.set(el, {
+    hasAnimated: false,
+    isReversing: false,
+    controls,
+  });
+
+  return controls;
+}
+
+/**
  * Set element to its initial animation state without playing the animation
  * We create the animation controls but don't apply transforms yet to preserve
  * natural position for Intersection Observer. CSS handles initial visibility.
  */
 export function setInitialState(el: HTMLElement, opts: ElementOptions): void {
-  // Skip if already has initial state or is currently animating
-  if (elementStates.has(el) || running.has(el)) return;
+  // Skip if currently animating
+  if (running.has(el)) return;
 
-  const controls = createAnimation(el, opts);
+  const controls = ensureAnimation(el, opts);
   if (!controls) return;
 
   // Create controls but don't set time yet - this preserves natural position
   // CSS will handle initial visibility (opacity: 0, visibility: hidden, etc.)
   controls.pause();
 
-  // Store state
-  elementStates.set(el, {
-    hasAnimated: false,
-    isReversing: false,
-    controls,
-  });
+  // Update state
+  const state = elementStates.get(el)!;
+  state.hasAnimated = false;
+  state.isReversing = false;
 }
 
 /**
@@ -96,7 +116,7 @@ function createAnimation(el: HTMLElement, opts: ElementOptions): AnimationPlayba
  * Set element to its final animation state instantly (for above-viewport elements)
  */
 export function setFinalState(el: HTMLElement, opts: ElementOptions): void {
-  const controls = createAnimation(el, opts);
+  const controls = ensureAnimation(el, opts);
   if (!controls) return;
 
   // Set animation to final time and pause
@@ -105,41 +125,11 @@ export function setFinalState(el: HTMLElement, opts: ElementOptions): void {
 
   // Mark as animated and add animate class
   el.classList.add("mos-animate");
-  elementStates.set(el, {
-    hasAnimated: true,
-    isReversing: false,
-    controls,
-  });
-}
 
-/**
- * Reverse the animation (for scroll up behavior)
- */
-export function reverse(el: HTMLElement): void {
-  const state = elementStates.get(el);
-  if (!state?.controls) return;
-
-  const controls = state.controls;
-
-  // Set to reverse playback
-  controls.speed = -1;
-  controls.play();
-  state.isReversing = true;
-
-  // Update running map
-  running.set(el, controls);
-
-  // When reverse completes, reset to initial state
-  controls.finished.then(() => {
-    if (state.isReversing) {
-      controls.time = 0;
-      controls.pause();
-      running.delete(el);
-      el.classList.remove("mos-animate");
-      state.isReversing = false;
-      state.hasAnimated = false;
-    }
-  });
+  // Update state
+  const state = elementStates.get(el)!;
+  state.hasAnimated = true;
+  state.isReversing = false;
 }
 
 /**
@@ -227,34 +217,23 @@ function getKeyframesWithDistance(opts: ElementOptions, resolvedKeyframes: any):
 
 export function play(el: HTMLElement, opts: ElementOptions): void {
   const existing = running.get(el);
-  if (existing) return; // already animating
-
   const state = elementStates.get(el);
-  let controls: AnimationPlaybackControls;
 
-  if (state?.controls) {
-    // Use existing controls and start animation from beginning
-    controls = state.controls;
-    controls.time = 0; // Set to initial state
-    controls.speed = 1; // Ensure forward playback
-    controls.play(); // Now play the animation
-    state.hasAnimated = true;
-    state.isReversing = false;
-  } else {
-    // Create new animation and play immediately
-    const newControls = createAnimation(el, opts);
-    if (!newControls) return;
+  // If already animating but not reversing, don't interrupt
+  if (existing && state && !state.isReversing) return;
 
-    controls = newControls;
-    // Animation starts playing immediately when created
+  // Ensure animation controls exist (create only once)
+  const controls = ensureAnimation(el, opts);
+  if (!controls) return;
 
-    // Store state
-    elementStates.set(el, {
-      hasAnimated: true,
-      isReversing: false,
-      controls,
-    });
-  }
+  // Use existing controls and start animation
+  controls.speed = 1; // Ensure forward playback
+  controls.play(); // Now play the animation
+
+  // Update state (reuse existing state variable)
+  const updatedState = elementStates.get(el)!;
+  updatedState.hasAnimated = true;
+  updatedState.isReversing = false;
 
   // mark element as animating so CSS can reveal it
   el.classList.add("mos-animate");
@@ -267,6 +246,55 @@ export function play(el: HTMLElement, opts: ElementOptions): void {
       running.delete(el);
     }
   });
+}
+
+/**
+ * Reverse the animation (for scroll up behavior)
+ */
+export function reverse(el: HTMLElement, onComplete?: () => void): void {
+  const state = elementStates.get(el);
+  if (!state?.controls) return;
+
+  const controls = state.controls;
+  
+  // Store current time to calculate when reverse should complete
+  const currentTime = controls.time;
+
+  // Set to reverse playback
+  controls.speed = -1;
+  controls.play();
+  state.isReversing = true;
+
+  // Update running map
+  running.set(el, controls);
+
+  // For in-progress animations, we need to manually track completion
+  // because controls.finished might resolve immediately when changing speed
+  const checkReverseComplete = () => {
+    if (!state.isReversing) return; // Animation was interrupted
+    
+    // Check if we've reached the beginning (time = 0)
+    if (controls.time <= 0) {
+      // Reverse is complete, reset to initial state
+      controls.time = 0;
+      controls.pause();
+      running.delete(el);
+      el.classList.remove("mos-animate");
+      state.isReversing = false;
+      state.hasAnimated = false;
+      
+      // Notify scroll handler that reverse is complete
+      if (onComplete) {
+        onComplete();
+      }
+    } else {
+      // Continue checking
+      requestAnimationFrame(checkReverseComplete);
+    }
+  };
+  
+  // Start checking for completion
+  requestAnimationFrame(checkReverseComplete);
 }
 
 export function reset(el: HTMLElement): void {
