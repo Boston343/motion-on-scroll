@@ -78,16 +78,6 @@ One of the nine combinations below:
 
 Use these to describe which part of the *anchor* meets which part of the *target* when deciding the trigger point.
 
-<Aside>
-  This is included for parity with AOS, but MOS also supports `data-mos-amount` for more fine-grained control.
-</Aside>
-
-### data-mos-amount
-*Type*: `number` (0–1)  
-*Default*: —  
-
-Numeric override (0–1) passed directly to `inView` and takes precedence over `data-mos-anchor-placement`. Useful for fine-grained control. `0` represents when "some" of an element enters the viewport, and `1` represents when the entire element is inside the viewport.
-
 ## Element vs Global precedence
 
 Values resolve in the following order (highest first):

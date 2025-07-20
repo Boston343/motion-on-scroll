@@ -250,20 +250,18 @@ interface ElementOptions {
   easing: EasingKeyword | string;
   /** If true, an element animates only once */
   once: boolean;
+  /** If true, elements animate when scrolling up as well as down (requires once: false) */
+  mirror: boolean;
   /** Disable condition */
   disable: DeviceDisable;
   /** If true, automatic DOM MutationObserver is not started */
   disableMutationObserver: boolean;
   /** DOM event that triggers MOS to start. Defaults to "DOMContentLoaded" */
   startEvent: string;
-  /** Preset animation name */
-  keyframes: string;
-  /** Selector of anchor element whose position controls trigger */
-  anchor?: string;
-  /** 9-grid intersection that decides when the animation triggers */
-  anchorPlacement?: AnchorPlacement;
-  /** Direct numeric amount (0–1) passed to inView; overrides anchorPlacement when provided */
-  amount?: number;
+  /** Throttle delay for scroll events in ms */
+  throttleDelay: number;
+  /** Debounce delay for resize/orientation events in ms */
+  debounceDelay: number;
 }
 ```
 
@@ -272,7 +270,7 @@ interface ElementOptions {
 motion-on-scroll also exports functions directly:
 
 ```ts
-import { init, refreshHard, registerAnimation, registerEasing, registerKeyframes } from 'motion-on-scroll';
+import { init, refresh, refreshHard, registerAnimation, registerEasing, registerKeyframes } from 'motion-on-scroll';
 ```
 
 They are identical to the namespaced versions.
