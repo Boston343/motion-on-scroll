@@ -8,7 +8,6 @@
 import { play, reverse, setFinalState, setInitialState } from "./animations.js";
 import { DEFAULT_OPTIONS } from "./constants.js";
 import { getPositionIn, getPositionOut, isElementAboveViewport } from "./position-calculator.js";
-import { getScrollDirection } from "./scroll-tracker.js";
 import type { ElementOptions } from "./types.js";
 import { debounce, throttle } from "./utils.js";
 

@@ -15,7 +15,6 @@ import {
   refreshElements,
   updateScrollHandlerDelays,
 } from "./helpers/scroll-handler.js";
-import { initScrollTracker, updateScrollTrackerDelay } from "./helpers/scroll-tracker.js";
 import type { ElementOptions, PartialMosOptions } from "./helpers/types.js";
 import { debounce, isDisabled, removeMosAttributes } from "./helpers/utils.js";
 
@@ -102,10 +101,6 @@ export function initializeScrollSystem(): void {
     libraryConfig.throttleDelay ?? DEFAULT_OPTIONS.throttleDelay,
     libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
   );
-  updateScrollTrackerDelay(libraryConfig.throttleDelay ?? DEFAULT_OPTIONS.throttleDelay);
-
-  // Start scroll direction tracking
-  initScrollTracker();
 
   // Process all elements and start observing them
   processAllElements();
