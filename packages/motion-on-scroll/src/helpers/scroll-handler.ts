@@ -81,14 +81,14 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
    */
   const hideElement = (): void => {
     if (!elementData.animated || elementData.isReversing) return;
-    
+
     // Start reverse animation with completion callback
     reverse(element, () => {
       // Sync state when reverse animation completes
       elementData.animated = false;
       elementData.isReversing = false;
     });
-    
+
     // Mark as reversing immediately for state tracking
     elementData.isReversing = true;
   };
@@ -99,7 +99,7 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
    */
   const showElement = (): void => {
     if (elementData.animated && !elementData.isReversing) return;
-    
+
     // Start forward animation
     play(element, options);
     elementData.animated = true;
@@ -122,17 +122,17 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
  */
 function shouldHideElement(elementData: MosElement, scrollY: number): boolean {
   const { options, position } = elementData;
-  
+
   // Hide if past exit point and mirror is enabled
   if (options.mirror && position.out !== false && scrollY >= position.out && !options.once) {
     return true;
   }
-  
+
   // Hide if before entry point, was previously animated, and not set to animate once
   if (elementData.animated && scrollY < position.in && !options.once) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -144,7 +144,7 @@ function shouldHideElement(elementData: MosElement, scrollY: number): boolean {
  */
 function shouldShowElement(elementData: MosElement, scrollY: number): boolean {
   const { position } = elementData;
-  
+
   // Show if scroll position has reached the element's entry point
   return scrollY >= position.in;
 }
@@ -159,7 +159,7 @@ function shouldShowElement(elementData: MosElement, scrollY: number): boolean {
  */
 function processScrollEvent(): void {
   const currentScrollY = window.scrollY;
-  
+
   // Update animation state for all tracked elements
   trackedElements.forEach((elementData) => {
     updateElementAnimationState(elementData, currentScrollY);
@@ -267,7 +267,7 @@ export function observeElement(element: HTMLElement, options: ElementOptions): v
 
   // Check if element is already being tracked
   const existingElementIndex = findTrackedElementIndex(element);
-  
+
   if (existingElementIndex !== -1) {
     // Update existing element's options
     const existingElement = trackedElements[existingElementIndex]!;
@@ -334,7 +334,7 @@ function ensureScrollHandlerActive(): void {
 
   // Set up event listeners
   setupScrollEventListeners(throttledScrollHandler, debouncedPositionRecalculator);
-  
+
   // Store reference for cleanup
   activeScrollHandler = throttledScrollHandler;
 
@@ -349,7 +349,7 @@ function ensureScrollHandlerActive(): void {
  */
 function setupScrollEventListeners(
   scrollHandler: (...args: any[]) => void,
-  resizeHandler: (...args: any[]) => void
+  resizeHandler: (...args: any[]) => void,
 ): void {
   // Scroll events (throttled for performance)
   window.addEventListener("scroll", scrollHandler, { passive: true });
@@ -369,11 +369,11 @@ export function cleanupScrollHandler(): void {
     window.removeEventListener("scroll", activeScrollHandler);
     window.removeEventListener("resize", recalculateAllPositions);
     window.removeEventListener("orientationchange", recalculateAllPositions);
-    
+
     // Clear handler reference
     activeScrollHandler = null;
   }
-  
+
   // Clear all tracked elements
   trackedElements = [];
 }

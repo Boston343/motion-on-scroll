@@ -64,10 +64,10 @@ function findMosElements(): HTMLElement[] {
 function observeElementOnce(element: HTMLElement, options: ElementOptions): void {
   // Skip if already observing this element
   if (observedElements.has(element)) return;
-  
+
   // Skip if animations are disabled for this element
   if (isDisabled(options.disable)) return;
-  
+
   // Mark as observed and start observing
   observedElements.add(element);
   startObservingElement(element, options);
@@ -79,12 +79,12 @@ function observeElementOnce(element: HTMLElement, options: ElementOptions): void
  */
 function processAllElements(): HTMLElement[] {
   const elements = findMosElements();
-  
+
   elements.forEach((element) => {
     const elementOptions = resolveElementOptions(element, libraryConfig);
     observeElementOnce(element, elementOptions);
   });
-  
+
   return elements;
 }
 
@@ -139,7 +139,7 @@ function startDomObserver(): void {
 
   // Clean up existing observer
   domObserver?.disconnect();
-  
+
   // Create new observer that triggers a hard refresh when DOM changes
   domObserver = new MutationObserver(() => performHardRefresh());
   domObserver.observe(document.body, { childList: true, subtree: true });
@@ -214,7 +214,7 @@ function adjustTimeUnitsOnFirstInit(config: PartialMosOptions): void {
   if (config.duration == null) {
     config.duration = DEFAULT_OPTIONS.duration / 1000;
   }
-  
+
   // Convert default delay from ms to seconds if not explicitly set
   if (config.delay == null) {
     config.delay = DEFAULT_OPTIONS.delay / 1000;
@@ -239,7 +239,7 @@ function setupLayoutChangeListeners(): void {
  */
 function setupStartEventListener(): void {
   const startEvent = libraryConfig.startEvent ?? DEFAULT_OPTIONS.startEvent;
-  
+
   if (["DOMContentLoaded", "load"].includes(startEvent)) {
     // Use DOMContentLoaded for standard events
     window.addEventListener("DOMContentLoaded", () => refreshLibrary(true));

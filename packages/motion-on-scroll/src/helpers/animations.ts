@@ -63,17 +63,17 @@ const customAnimationRegistry: Record<string, AnimationFactory> = {};
 /**
  * Registers a custom animation that can be used by name in data-mos attributes
  * The factory function receives the element and options, and must return Motion's AnimationPlaybackControls
- * 
+ *
  * @param name - Unique name for the animation (used in data-mos="name")
  * @param factory - Function that creates and returns animation controls
- * 
+ *
  * @example
  * ```typescript
  * registerAnimation('customSlide', (element, options) => {
  *   return animate(element, { x: [100, 0] }, { duration: options.duration });
  * });
  * ```
- * 
+ *
  * @throws Error if name is empty or invalid
  */
 export function registerAnimation(name: string, factory: AnimationFactory): void {
@@ -90,14 +90,17 @@ export function registerAnimation(name: string, factory: AnimationFactory): void
 /**
  * Ensures animation controls exist for an element, creating them only once
  * Subsequent calls return the existing controls for performance
- * 
+ *
  * @param element - The DOM element to ensure animation for
  * @param options - Animation configuration options
  * @returns Animation controls or null if creation failed
  */
-function ensureAnimationControls(element: HTMLElement, options: ElementOptions): AnimationPlaybackControls | null {
+function ensureAnimationControls(
+  element: HTMLElement,
+  options: ElementOptions,
+): AnimationPlaybackControls | null {
   const existingState = elementAnimationStates.get(element);
-  
+
   // Return existing controls if available
   if (existingState?.controls) {
     return existingState.controls;
@@ -125,7 +128,7 @@ function ensureAnimationControls(element: HTMLElement, options: ElementOptions):
  * Sets an element to its initial animation state without playing the animation
  * Creates animation controls but preserves natural position for accurate scroll calculations
  * CSS handles initial visibility (opacity: 0, visibility: hidden, etc.)
- * 
+ *
  * @param element - The DOM element to set initial state for
  * @param options - Animation configuration options
  */
@@ -149,7 +152,7 @@ export function setInitialState(element: HTMLElement, options: ElementOptions): 
 /**
  * Sets up a single completion handler for animation controls
  * Uses element state to determine whether to handle forward or reverse completion
- * 
+ *
  * @param element - The DOM element being animated
  * @param controls - The animation controls to set up handler for
  * @param options - Animation configuration options
@@ -182,14 +185,14 @@ function setupAnimationCompletionHandler(
 function handleReverseAnimationCompletion(
   element: HTMLElement,
   controls: AnimationPlaybackControls,
-  state: ElementAnimationState
+  state: ElementAnimationState,
 ): void {
   // Reset animation to initial state
   controls.time = 0;
   controls.pause();
   activeAnimations.delete(element);
   element.classList.remove("mos-animate");
-  
+
   // Update state
   state.isReversing = false;
   state.hasAnimated = false;
@@ -209,13 +212,13 @@ function handleReverseAnimationCompletion(
 function handleForwardAnimationCompletion(
   element: HTMLElement,
   controls: AnimationPlaybackControls,
-  options: ElementOptions
+  options: ElementOptions,
 ): void {
   if (options.once) {
     // Stop animation permanently for once-only animations
     controls.stop();
   }
-  
+
   // Remove from active animations
   activeAnimations.delete(element);
 }
@@ -239,12 +242,15 @@ function handleAnimationInterruption(element: HTMLElement): void {
 /**
  * Creates animation controls for an element without starting playback
  * Handles both custom animations and built-in keyframe animations
- * 
+ *
  * @param element - The DOM element to create animation for
  * @param options - Animation configuration options
  * @returns Animation controls or null if creation failed
  */
-function createAnimationControls(element: HTMLElement, options: ElementOptions): AnimationPlaybackControls | null {
+function createAnimationControls(
+  element: HTMLElement,
+  options: ElementOptions,
+): AnimationPlaybackControls | null {
   // Check for custom animation first
   const customAnimation = customAnimationRegistry[options.keyframes];
   if (customAnimation) {
@@ -265,7 +271,7 @@ function createAnimationControls(element: HTMLElement, options: ElementOptions):
 function createCustomAnimation(
   element: HTMLElement,
   options: ElementOptions,
-  factory: AnimationFactory
+  factory: AnimationFactory,
 ): AnimationPlaybackControls {
   const controls = factory(element, options);
   setupAnimationCompletionHandler(element, controls, options);
@@ -278,13 +284,16 @@ function createCustomAnimation(
  * @param options - Animation configuration options
  * @returns Animation controls from Motion
  */
-function createKeyframeAnimation(element: HTMLElement, options: ElementOptions): AnimationPlaybackControls {
+function createKeyframeAnimation(
+  element: HTMLElement,
+  options: ElementOptions,
+): AnimationPlaybackControls {
   // Resolve keyframes for the animation
   const keyframes = resolveAnimationKeyframes(options);
-  
+
   // Resolve easing function
   const easing = resolveAnimationEasing(options);
-  
+
   // Create animation with Motion
   const controls = animate(element, keyframes, {
     duration: options.timeUnits === "s" ? options.duration : options.duration / 1000,
@@ -307,12 +316,12 @@ function createKeyframeAnimation(element: HTMLElement, options: ElementOptions):
  */
 function resolveAnimationKeyframes(options: ElementOptions): any {
   const resolvedKeyframes = resolveKeyframes(options.keyframes);
-  
+
   // Apply custom distance if different from default
   if (options.distance != null && options.distance !== DEFAULT_OPTIONS.distance) {
     return getKeyframesWithDistance(options, resolvedKeyframes);
   }
-  
+
   return resolvedKeyframes;
 }
 
@@ -324,7 +333,7 @@ function resolveAnimationKeyframes(options: ElementOptions): any {
  */
 function resolveAnimationEasing(options: ElementOptions): any {
   let easing = resolveEasing(options.easing);
-  
+
   // Handle invalid easing with fallback
   if (options.easing && easing === null) {
     console.warn(
@@ -332,14 +341,14 @@ function resolveAnimationEasing(options: ElementOptions): any {
     );
     easing = resolveEasing(DEFAULT_OPTIONS.easing);
   }
-  
+
   return easing === null ? undefined : easing;
 }
 
 /**
  * Sets an element to its final animation state instantly
  * Used for elements that are above the viewport on page load
- * 
+ *
  * @param element - The DOM element to set final state for
  * @param options - Animation configuration options
  */
@@ -367,7 +376,7 @@ export function setFinalState(element: HTMLElement, options: ElementOptions): vo
 /**
  * Plays the animation for an element in the forward direction
  * Creates animation controls if they don't exist, otherwise reuses existing ones
- * 
+ *
  * @param element - The DOM element to animate
  * @param options - Animation configuration options
  */
@@ -398,7 +407,7 @@ export function play(element: HTMLElement, options: ElementOptions): void {
 /**
  * Reverses the animation for an element (used for scroll up behavior)
  * Uses negative playback speed to smoothly reverse the animation
- * 
+ *
  * @param element - The DOM element to reverse animation for
  * @param onComplete - Optional callback to call when reverse completes
  */
