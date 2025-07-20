@@ -18,16 +18,15 @@ const _observedEls = new WeakSet<HTMLElement>();
 
 /**
  * Observe an element using custom AOS-style scroll detection
- * This replaces Motion's inView with direct scroll event handling
  */
 function observeElement(el: HTMLElement, opts: ElementOptions) {
   if (isDisabled(opts.disable)) {
     return; // Skip observing entirely when disabled
   }
 
-  // Use the custom scroll handler instead of Motion's inView
   observeElementWithScrollHandler(el, opts);
 }
+
 function observeOnce(el: HTMLElement, opts: Parameters<typeof observeElement>[1]) {
   if (_observedEls.has(el)) return;
   _observedEls.add(el);
@@ -189,5 +188,12 @@ function refreshHard() {
   refresh();
 }
 
-export const MOS = { init, refreshHard, registerKeyframes, registerEasing, registerAnimation };
-export { init, refreshHard, registerAnimation, registerEasing, registerKeyframes };
+export const MOS = {
+  init,
+  refresh,
+  refreshHard,
+  registerKeyframes,
+  registerEasing,
+  registerAnimation,
+};
+export { init, refresh, refreshHard, registerAnimation, registerEasing, registerKeyframes };
