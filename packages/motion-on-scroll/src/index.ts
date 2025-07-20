@@ -1,74 +1,161 @@
+// ===================================================================
+// MOTION-ON-SCROLL (MOS) - Main Entry Point
+// ===================================================================
+// This file provides the public API for the Motion-on-Scroll library.
+// It handles initialization, configuration, and lifecycle management.
+
 import { registerAnimation } from "./helpers/animations.js";
 import { resolveElementOptions } from "./helpers/attributes.js";
 import { DEFAULT_OPTIONS } from "./helpers/constants.js";
 import { registerEasing } from "./helpers/easing.js";
 import { registerKeyframes } from "./helpers/keyframes.js";
-import { observeElement } from "./helpers/observer.js";
+import { startDomObserver } from "./helpers/observer.js";
+import {
+  cleanupScrollHandler,
+  observeElement as startObservingElement,
+  refreshElements,
+  updateScrollHandlerDelays,
+} from "./helpers/scroll-handler.js";
+import type { ElementOptions, MosOptions, PartialMosOptions } from "./helpers/types.js";
+import { debounce, isDisabled, removeMosAttributes } from "./helpers/utils.js";
 
-// Track elements already observed to avoid duplicate observations
-const _observedEls = new WeakSet<HTMLElement>();
-function observeOnce(el: HTMLElement, opts: Parameters<typeof observeElement>[1]) {
-  if (_observedEls.has(el)) return;
-  _observedEls.add(el);
-  observeElement(el, opts);
-}
-import type { PartialMosOptions } from "./helpers/types.js";
-import { isDisabled, removeMosAttributes } from "./helpers/utils.js";
+// ===================================================================
+// LIBRARY STATE MANAGEMENT
+// ===================================================================
 
-let globalOptions: PartialMosOptions = {};
-// Indicates that the core observers have been started
-let initialized = false;
-let mo: MutationObserver | null = null;
+/**
+ * Global configuration options merged from all init() calls
+ */
+let libraryConfig: MosOptions = DEFAULT_OPTIONS;
 
-function collectElements(): HTMLElement[] {
+/**
+ * Tracks whether the library has been initialized and is actively running
+ */
+let isLibraryActive = false;
+
+/**
+ * Set of elements already being observed to prevent duplicate observations
+ */
+const observedElements = new WeakSet<HTMLElement>();
+
+// ===================================================================
+// ELEMENT DISCOVERY AND MANAGEMENT
+// ===================================================================
+
+/**
+ * Finds all elements in the DOM that have the data-mos attribute
+ * @returns Array of HTMLElements with data-mos attributes
+ */
+function findMosElements(): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>("[data-mos]"));
 }
 
-function bootstrap() {
-  // If already initialised by auto-init, merge new options and refresh
-  if (initialized) return;
-  initialized = true;
+/**
+ * Starts observing an element for scroll-based animations
+ * Prevents duplicate observations using the observedElements set
+ * @param element - The DOM element to observe
+ * @param options - Animation options for this element
+ */
+export function observeElementOnce(element: HTMLElement, options: ElementOptions): void {
+  // Skip if already observing this element
+  if (observedElements.has(element)) return;
 
-  // Global disable shortcut – strip data attributes and abort
-  if (isDisabled(globalOptions.disable ?? false)) {
-    collectElements().forEach(removeMosAttributes);
-    return;
-  }
+  // Skip if animations are disabled for this element
+  if (isDisabled(options.disable)) return;
 
-  // Start MutationObserver unless disabled
-  if (!globalOptions.disableMutationObserver && typeof MutationObserver !== "undefined") {
-    mo?.disconnect();
-    mo = new MutationObserver(() => refreshHard());
-    mo.observe(document.body, { childList: true, subtree: true });
-  }
-
-  // Observe current elements
-  collectElements().forEach((el) => {
-    const opts = resolveElementOptions(el, globalOptions);
-    observeOnce(el, opts);
-  });
+  // Mark as observed and start observing
+  observedElements.add(element);
+  startObservingElement(element, options);
 }
 
-function init(options: PartialMosOptions = {}) {
-  // Merge new options onto existing ones (later options override earlier ones)
-  globalOptions = { ...globalOptions, ...options };
+/**
+ * Processes all current MOS elements in the DOM
+ * Resolves their options and starts observing them
+ */
+export function processAllElements(): HTMLElement[] {
+  const elements = findMosElements();
 
-  // Handle alternate time units adjustment the first time init is called
-  if (!initialized && globalOptions.timeUnits === "s") {
-    if (globalOptions.duration == null) globalOptions.duration = DEFAULT_OPTIONS.duration / 1000;
-    if (globalOptions.delay == null) globalOptions.delay = DEFAULT_OPTIONS.delay / 1000;
+  elements.forEach((element) => {
+    const elementOptions = resolveElementOptions(element, libraryConfig);
+    observeElementOnce(element, elementOptions);
+  });
+
+  return elements;
+}
+
+// ===================================================================
+// SCROLL SYSTEM INITIALIZATION
+// ===================================================================
+
+/**
+ * Configures and starts the scroll detection system
+ * This includes throttling, scroll tracking, and element preparation
+ */
+export function initializeScrollSystem(): void {
+  // Configure performance settings from library config
+  updateScrollHandlerDelays(
+    libraryConfig.throttleDelay ?? DEFAULT_OPTIONS.throttleDelay,
+    libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
+  );
+
+  // Process all elements and start observing them
+  processAllElements();
+
+  // Calculate positions and set initial states for all elements
+  refreshElements();
+}
+
+/**
+ * Recalculates element positions after layout changes
+ * Called on window resize and orientation change
+ */
+export function handleLayoutChange(): void {
+  if (isLibraryActive) {
+    refreshElements();
+  }
+}
+
+// ===================================================================
+// CONFIGURATION AND TIME UNITS
+// ===================================================================
+
+/**
+ * Adjusts duration and delay values when using seconds instead of milliseconds
+ * Only applied on first initialization when timeUnits is set to "s"
+ * @param config - The configuration object to potentially modify
+ */
+function adjustTimeUnitsOnFirstInit(config: MosOptions): void {
+  if (isLibraryActive || config.timeUnits !== "s") return;
+
+  // Convert default duration from ms to seconds if not explicitly set
+  if (config.duration == null) {
+    config.duration = DEFAULT_OPTIONS.duration / 1000;
   }
 
-  const startEvent = globalOptions.startEvent ?? DEFAULT_OPTIONS.startEvent;
-
-  // If MOS has already been initialised by a previous call, just refresh and return
-  if (initialized) {
-    collectElements().forEach((el) => {
-      const opts = resolveElementOptions(el, globalOptions);
-      observeOnce(el, opts);
-    });
-    return;
+  // Convert default delay from ms to seconds if not explicitly set
+  if (config.delay == null) {
+    config.delay = DEFAULT_OPTIONS.delay / 1000;
   }
+}
+
+/**
+ * Sets up event listeners for layout changes (resize, orientation)
+ * Uses debounced handlers to prevent excessive recalculations
+ */
+function setupLayoutChangeListeners(): void {
+  const debounceDelay = libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay;
+  const debouncedHandler = debounce(handleLayoutChange, debounceDelay);
+
+  window.addEventListener("resize", debouncedHandler);
+  window.addEventListener("orientationchange", debouncedHandler);
+}
+
+/**
+ * Sets up the start event listener based on configuration
+ * Handles both standard events (DOMContentLoaded, load) and custom events
+ */
+export function setupStartEventListener(): void {
+  const startEvent = libraryConfig.startEvent ?? DEFAULT_OPTIONS.startEvent;
 
   // If the desired event has already fired, bootstrap immediately
   if (
@@ -76,30 +163,98 @@ function init(options: PartialMosOptions = {}) {
       ["interactive", "complete"].includes(document.readyState)) ||
     (startEvent === "load" && document.readyState === "complete")
   ) {
-    bootstrap();
+    refresh(true);
     return;
   }
 
   // Otherwise, attach listener for the start event
   if (startEvent === "load") {
-    window.addEventListener(startEvent, bootstrap, { once: true });
+    window.addEventListener(startEvent, () => refresh(true), { once: true });
   } else {
-    document.addEventListener(startEvent, bootstrap, { once: true });
+    document.addEventListener(startEvent, () => refresh(true), { once: true });
   }
+
+  // Don't start mutation observer if disabled or not supported
+  if (libraryConfig.disableMutationObserver || typeof MutationObserver === "undefined") {
+    return;
+  }
+  startDomObserver();
 }
 
-function refreshHard() {
-  // Re-run observation for all current elements with existing global options
-  if (isDisabled(globalOptions.disable ?? false)) {
-    collectElements().forEach(removeMosAttributes);
+// ===================================================================
+// PUBLIC API
+// ===================================================================
+
+/**
+ * Initializes the Motion-on-Scroll library with the given options
+ * Can be called multiple times - options will be merged
+ * @param options - Configuration options for the library
+ * @returns Array of elements found in the DOM (for compatibility)
+ */
+function init(options: PartialMosOptions = {}): HTMLElement[] {
+  // Merge new options with existing configuration
+  libraryConfig = { ...libraryConfig, ...options };
+
+  // Handle time unit conversion on first initialization
+  adjustTimeUnitsOnFirstInit(libraryConfig);
+
+  // If already initialized, just refresh with new options
+  if (isLibraryActive) {
+    return processAllElements();
+  }
+
+  // Handle global disable - clean up and exit early
+  if (isDisabled(libraryConfig.disable ?? false)) {
+    findMosElements().forEach(removeMosAttributes);
+    return [];
+  }
+
+  // Set up event listeners
+  setupStartEventListener();
+  setupLayoutChangeListeners();
+
+  // Return current elements for compatibility
+  return findMosElements();
+}
+
+/**
+ * Refreshes the library state and re-processes all elements
+ * @param shouldActivate - Whether this refresh should activate the library
+ */
+function refresh(shouldActivate = false): void {
+  if (shouldActivate) isLibraryActive = true;
+  if (isLibraryActive) initializeScrollSystem();
+}
+
+/**
+ * Performs a hard refresh - completely resets and re-initializes the library
+ * Useful when the DOM structure has changed significantly
+ */
+function refreshHard(): void {
+  // Handle global disable - clean up and exit early
+  if (isDisabled(libraryConfig.disable ?? false)) {
+    findMosElements().forEach(removeMosAttributes);
     return;
   }
 
-  collectElements().forEach((el) => {
-    const opts = resolveElementOptions(el, globalOptions);
-    observeOnce(el, opts);
-  });
+  // Clean up existing scroll handlers
+  cleanupScrollHandler();
+
+  // Re-initialize everything
+  refresh(true);
 }
 
-export const MOS = { init, refreshHard, registerKeyframes, registerEasing, registerAnimation };
-export { init, refreshHard, registerAnimation, registerEasing, registerKeyframes };
+// ===================================================================
+// EXPORTS
+// ===================================================================
+
+export const MOS = {
+  init,
+  refresh,
+  refreshHard,
+  registerKeyframes,
+  registerEasing,
+  registerAnimation,
+};
+
+export { init, refresh, refreshHard, registerAnimation, registerEasing, registerKeyframes };

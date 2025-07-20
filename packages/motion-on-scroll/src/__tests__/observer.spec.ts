@@ -1,81 +1,164 @@
 import { JSDOM } from "jsdom";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock motion.inView early so observer imports the stub
-vi.mock("motion", () => ({ inView: vi.fn() }));
+// Mock refreshHard so we can assert against it
+vi.mock("../index.js", () => ({
+  refreshHard: vi.fn(),
+}));
 
-import { DEFAULT_OPTIONS } from "../helpers/constants.js";
-import { computeIOOptions, observeElement } from "../helpers/observer.js";
-import type { AnchorPlacement } from "../helpers/types.js";
-
-const { inView } = await import("motion");
+import { startDomObserver } from "../helpers/observer.js";
+import { refreshHard } from "../index.js";
 
 /**
- * Unit tests for observer helpers (currently only computeIOOptions).
- * We purposely avoid wiring a DOM for IntersectionObserver – that behaviour
- * is covered indirectly through motion integration and separate E2E tests.
+ * Fake MutationObserver implementation for JSDOM that captures the callback
+ * and options passed to `observe`. It allows manual triggering of mutations
+ * within tests.
  */
+class FakeMutationObserver {
+  public callback: MutationCallback;
+  public observedTarget: Node | null = null;
+  public observedOptions: MutationObserverInit | null = null;
 
-describe("computeIOOptions", () => {
-  const OFFSET = 120;
+  constructor(cb: MutationCallback) {
+    this.callback = cb;
+    FakeMutationObserver.instances.push(this);
+  }
 
-  const cases: Array<[AnchorPlacement | undefined, number]> = [
-    ["top-top", 1],
-    ["top-center", 0.75],
-    ["top-bottom", 0],
-    ["center-center", 0.5],
-    ["bottom-center", 0.25],
-    ["bottom-bottom", 0],
-    [undefined, 0], // default when not provided
-  ];
+  disconnect() {
+    /* noop */
+  }
 
-  cases.forEach(([placement, expectedAmount]) => {
-    it(`maps ${placement ?? "<undefined>"} ➜ amount ${expectedAmount}`, () => {
-      const { amount } = computeIOOptions(placement, OFFSET);
-      expect(amount).toBe(expectedAmount);
-    });
-  });
+  observe(target: Node, options?: MutationObserverInit) {
+    this.observedTarget = target;
+    this.observedOptions = options ?? null;
+  }
 
-  it("returns symmetric rootMargin from offset", () => {
-    const { margin } = computeIOOptions("center-center", OFFSET);
-    expect(margin).toBe(`${OFFSET}px 0px -${OFFSET}px 0px`);
-  });
+  /** Utility to emit fake mutations */
+  emit(mutations: MutationRecord[]) {
+    this.callback(mutations, this as unknown as MutationObserver);
+  }
+
+  /** Registry so tests can access latest instance */
+  static instances: FakeMutationObserver[] = [];
+}
+
+global.MutationObserver = FakeMutationObserver as unknown as typeof MutationObserver;
+
+// Minimal DOM setup for dataset/element tests
+beforeAll(() => {
+  const { window } = new JSDOM("<html><body></body></html>");
+  (global as any).window = window;
+  (global as any).document = window.document;
+  (global as any).HTMLElement = window.HTMLElement;
 });
 
-// -----------------------------------------------------------------------------
-// Edge-case behaviour requiring DOM and mocked inView
-// -----------------------------------------------------------------------------
+beforeEach(() => {
+  // Clear mocks and previous instances before each test
+  vi.clearAllMocks();
+  FakeMutationObserver.instances.length = 0;
+});
 
-describe("observer edge-cases", () => {
-  beforeAll(() => {
-    const { window } = new JSDOM("<html><body></body></html>");
-    (global as any).window = window;
-    (global as any).document = window.document;
-    (global as any).HTMLElement = window.HTMLElement;
+describe("observer utilities", () => {
+  it("startDomObserver sets up MutationObserver on document.documentElement", () => {
+    startDomObserver();
+
+    expect(FakeMutationObserver.instances.length).toBe(1);
+    const instance = FakeMutationObserver.instances[0]!;
+
+    expect(instance.observedTarget).toBe(document.documentElement);
+    expect(instance.observedOptions).toEqual({ childList: true, subtree: true });
   });
 
-  it("falls back to amount 0 for unknown anchorPlacement", () => {
-    const res = computeIOOptions("non-existent" as AnchorPlacement, 80);
-    expect(res.amount).toBe(0);
-  });
+  it("triggers refreshHard when mutations affect data-mos elements", () => {
+    startDomObserver();
+    const instance = FakeMutationObserver.instances[0]!;
 
-  it("passes explicit data-mos-amount directly to inView", () => {
+    // Create element with data-mos
     const el = document.createElement("div");
-    const opts = { ...DEFAULT_OPTIONS, preset: "fade", offset: 60, amount: 0.42 } as const;
-    observeElement(el, opts as any);
+    el.dataset.mos = "fade";
 
-    expect(inView).toHaveBeenCalledTimes(1);
-    const options = (inView as any).mock.calls[0][2];
-    expect(options.amount).toBeCloseTo(0.42);
-    expect(options.margin).toBe(`${opts.offset}px 0px -${opts.offset}px 0px`);
+    const mutation: MutationRecord = {
+      addedNodes: [el] as unknown as NodeList,
+      removedNodes: [] as unknown as NodeList,
+      attributeName: null,
+      attributeNamespace: null,
+      nextSibling: null,
+      previousSibling: null,
+      oldValue: null,
+      target: document.body,
+      type: "childList",
+    } as MutationRecord;
+
+    instance.emit([mutation]);
+    expect(refreshHard).toHaveBeenCalledTimes(1);
   });
 
-  it("does not call inView when opts.disable is true", () => {
-    vi.clearAllMocks();
-    const el = document.createElement("div");
-    const opts = { ...DEFAULT_OPTIONS, preset: "fade", disable: true } as const;
-    observeElement(el, opts as any);
+  it("does not trigger refreshHard when mutations do not affect data-mos elements", () => {
+    startDomObserver();
+    const instance = FakeMutationObserver.instances[0]!;
 
-    expect(inView).not.toHaveBeenCalled();
+    const plain = document.createElement("span");
+
+    const mutation: MutationRecord = {
+      addedNodes: [plain] as unknown as NodeList,
+      removedNodes: [] as unknown as NodeList,
+      attributeName: null,
+      attributeNamespace: null,
+      nextSibling: null,
+      previousSibling: null,
+      oldValue: null,
+      target: document.body,
+      type: "childList",
+    } as MutationRecord;
+
+    instance.emit([mutation]);
+    expect(refreshHard).not.toHaveBeenCalled();
+  });
+
+  it("triggers refreshHard when data-mos attribute exists on descendant elements (recursive)", () => {
+    startDomObserver();
+    const instance = FakeMutationObserver.instances[0]!;
+
+    const parent = document.createElement("div");
+    const child = document.createElement("span");
+    child.dataset.mos = "fade";
+    parent.appendChild(child);
+
+    const mutation: MutationRecord = {
+      addedNodes: [parent] as unknown as NodeList,
+      removedNodes: [] as unknown as NodeList,
+      attributeName: null,
+      attributeNamespace: null,
+      nextSibling: null,
+      previousSibling: null,
+      oldValue: null,
+      target: document.body,
+      type: "childList",
+    } as MutationRecord;
+
+    instance.emit([mutation]);
+    expect(refreshHard).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores non-element nodes in mutation records", () => {
+    startDomObserver();
+    const instance = FakeMutationObserver.instances[0]!;
+
+    const textNode = document.createTextNode("hello");
+
+    const mutation: MutationRecord = {
+      addedNodes: [textNode] as unknown as NodeList,
+      removedNodes: [] as unknown as NodeList,
+      attributeName: null,
+      attributeNamespace: null,
+      nextSibling: null,
+      previousSibling: null,
+      oldValue: null,
+      target: document.body,
+      type: "childList",
+    } as MutationRecord;
+
+    instance.emit([mutation]);
+    expect(refreshHard).not.toHaveBeenCalled();
   });
 });

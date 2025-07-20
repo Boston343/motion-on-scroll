@@ -3,15 +3,23 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 // Mock motion before importing modules under test
 vi.mock("motion", () => {
   return {
-    animate: vi.fn(() => ({ finished: Promise.resolve(), stop: vi.fn() })),
-    spring: vi.fn((opts: any) => ({ ...opts, _spring: true })), // placeholder stub
+    animate: vi.fn(() => ({
+      play: vi.fn(),
+      pause: vi.fn(),
+      stop: vi.fn(),
+      complete: vi.fn(),
+      finished: Promise.resolve(),
+      speed: 1,
+      time: 0,
+    })),
+    spring: vi.fn((opts: any) => ({ ...opts, _spring: true })),
   };
 });
 
 import { JSDOM } from "jsdom";
 import * as motion from "motion";
 
-import { play, registerAnimation, reset } from "../helpers/animations.js";
+import { play, registerAnimation } from "../helpers/animations.js";
 import { DEFAULT_OPTIONS } from "../helpers/constants.js";
 import type { ElementOptions } from "../helpers/types.js";
 
@@ -67,13 +75,5 @@ describe("registerAnimation", () => {
     expect(() =>
       registerAnimation("" as any, () => ({ finished: Promise.resolve(), stop: () => {} }) as any),
     ).toThrow(/non-empty/i);
-  });
-
-  it("reset still stops controls for custom animations", () => {
-    registerAnimation("spin", (el) => motion.animate(el, { rotate: [0, 360] }, { duration: 1 }));
-    play(div, makeOpts({ keyframes: "spin" }));
-    const controls = animateSpy.mock.results[0].value;
-    reset(div);
-    expect(controls.stop).toHaveBeenCalled();
   });
 });

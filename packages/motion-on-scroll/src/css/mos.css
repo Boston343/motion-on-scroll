@@ -19,14 +19,11 @@
 /* slide presets */
 [data-mos^="slide"] {
   will-change: transform;
-  visibility: hidden;
-}
-[data-mos^="slide"].mos-animate {
-  visibility: visible;
 }
 
 /* flip presets */
 [data-mos^="flip"] {
   will-change: transform;
+  transform: rotateY(-180deg);
   backface-visibility: hidden;
 }

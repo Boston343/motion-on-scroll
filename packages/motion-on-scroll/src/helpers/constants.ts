@@ -13,11 +13,13 @@ export const DEFAULT_OPTIONS: MosOptions = {
   delay: 0,
   easing: "ease",
   once: false,
+  mirror: false,
   disable: false,
   disableMutationObserver: false,
   timeUnits: "ms",
-  /** DOM event that triggers MOS to start */
   startEvent: "DOMContentLoaded",
+  throttleDelay: 99,
+  debounceDelay: 50,
 };
 
 /**
@@ -62,35 +64,35 @@ export type EasingKeyword = keyof typeof EASINGS;
 
 // Built-in animation presets
 export const KEYFRAMES_PRESETS: Record<string, DOMKeyframesDefinition> = {
+  // Fades
   fade: { opacity: [0, 1] },
   "fade-up": { opacity: [0, 1], translateY: [100, 0] },
   "fade-down": { opacity: [0, 1], translateY: [-100, 0] },
-  "fade-left": { opacity: [0, 1], translateX: [-100, 0] },
-  "fade-right": { opacity: [0, 1], translateX: [100, 0] },
-  // Diagonal fades
-  "fade-up-right": { opacity: [0, 1], translateY: [100, 0], translateX: [100, 0] },
-  "fade-up-left": { opacity: [0, 1], translateY: [100, 0], translateX: [-100, 0] },
-  "fade-down-right": { opacity: [0, 1], translateY: [-100, 0], translateX: [100, 0] },
-  "fade-down-left": { opacity: [0, 1], translateY: [-100, 0], translateX: [-100, 0] },
-  // Flip
+  "fade-left": { opacity: [0, 1], translateX: [100, 0] },
+  "fade-right": { opacity: [0, 1], translateX: [-100, 0] },
+  "fade-up-right": { opacity: [0, 1], translateY: [100, 0], translateX: [-100, 0] },
+  "fade-up-left": { opacity: [0, 1], translateY: [100, 0], translateX: [100, 0] },
+  "fade-down-right": { opacity: [0, 1], translateY: [-100, 0], translateX: [-100, 0] },
+  "fade-down-left": { opacity: [0, 1], translateY: [-100, 0], translateX: [100, 0] },
+  // Flips
   "flip-up": { perspective: [2500, 2500], rotateX: [-100, 0] },
   "flip-down": { perspective: [2500, 2500], rotateX: [100, 0] },
   "flip-left": { perspective: [2500, 2500], rotateY: [100, 0] },
   "flip-right": { perspective: [2500, 2500], rotateY: [-100, 0] },
-  // Slide (no opacity change)
+  // Slides
   "slide-up": { translateY: [100, 0] },
   "slide-down": { translateY: [-100, 0] },
-  "slide-left": { translateX: [-100, 0] },
-  "slide-right": { translateX: [100, 0] },
-  // Zoom in/out
+  "slide-left": { translateX: [100, 0] },
+  "slide-right": { translateX: [-100, 0] },
+  // Zooms
   "zoom-in": { opacity: [0, 1], scale: [0.6, 1] },
   "zoom-in-up": { opacity: [0, 1], scale: [0.6, 1], translateY: [100, 0] },
   "zoom-in-down": { opacity: [0, 1], scale: [0.6, 1], translateY: [-100, 0] },
-  "zoom-in-left": { opacity: [0, 1], scale: [0.6, 1], translateX: [-100, 0] },
-  "zoom-in-right": { opacity: [0, 1], scale: [0.6, 1], translateX: [100, 0] },
+  "zoom-in-left": { opacity: [0, 1], scale: [0.6, 1], translateX: [100, 0] },
+  "zoom-in-right": { opacity: [0, 1], scale: [0.6, 1], translateX: [-100, 0] },
   "zoom-out": { opacity: [0, 1], scale: [1.2, 1] },
   "zoom-out-up": { opacity: [0, 1], scale: [1.2, 1], translateY: [100, 0] },
   "zoom-out-down": { opacity: [0, 1], scale: [1.2, 1], translateY: [-100, 0] },
-  "zoom-out-left": { opacity: [0, 1], scale: [1.2, 1], translateX: [-100, 0] },
-  "zoom-out-right": { opacity: [0, 1], scale: [1.2, 1], translateX: [100, 0] },
+  "zoom-out-left": { opacity: [0, 1], scale: [1.2, 1], translateX: [100, 0] },
+  "zoom-out-right": { opacity: [0, 1], scale: [1.2, 1], translateX: [-100, 0] },
 };

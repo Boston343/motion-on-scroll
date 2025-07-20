@@ -1,0 +1,202 @@
+---
+const animationSections = [
+  {
+    title: "Fade Animations",
+    animations: [
+      "fade",
+      "fade-up",
+      "fade-down",
+      "fade-left",
+      "fade-right",
+      "fade-up-right",
+      "fade-up-left",
+      "fade-down-right",
+      "fade-down-left",
+    ],
+    colorClasses: "from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-500",
+  },
+  {
+    title: "Flip Animations",
+    animations: ["flip-up", "flip-down", "flip-left", "flip-right"],
+    colorClasses: "from-pink-500 to-rose-600 dark:from-pink-400 dark:to-rose-500",
+  },
+  {
+    title: "Slide Animations",
+    animations: ["slide-up", "slide-down", "slide-left", "slide-right"],
+    colorClasses: "from-blue-500 to-cyan-600 dark:from-blue-400 dark:to-cyan-500",
+  },
+  {
+    title: "Zoom Animations",
+    animations: [
+      "zoom-in",
+      "zoom-in-up",
+      "zoom-in-down",
+      "zoom-in-left",
+      "zoom-in-right",
+      "zoom-out",
+      "zoom-out-up",
+      "zoom-out-down",
+      "zoom-out-left",
+      "zoom-out-right",
+    ],
+    colorClasses: "from-green-500 to-emerald-600 dark:from-green-400 dark:to-emerald-500",
+  },
+];
+---
+
+<div class="not-content mx-auto max-w-4xl p-8">
+  <div class="space-y-24">
+    {
+      animationSections.map((section) => {
+        let itemIndex = 0;
+        return (
+          <div class="space-y-8">
+            <h2 class="text-center text-3xl font-semibold text-gray-800 md:col-span-2 dark:text-gray-200">
+              {section.title}
+            </h2>
+
+            <div class="space-y-20">
+              {section.animations.map((animation) => {
+                const isLeft = itemIndex % 2 === 0;
+                itemIndex++;
+                return (
+                  <div
+                    class={`flex ${
+                      isLeft ? "justify-start md:justify-start" : "justify-end md:justify-end"
+                    }`}
+                  >
+                    <div
+                      class={`bg-gradient-to-br ${section.colorClasses} min-w-[200px] rounded-xl px-8 py-10 text-center font-semibold text-white shadow-xl`}
+                      data-mos={animation}
+                    >
+                      {animation}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })
+    }
+
+    <!-- Custom Animations Demo -->
+    <div class="space-y-8">
+      <h2 class="text-center text-3xl font-semibold text-gray-800 md:col-span-2 dark:text-gray-200">
+        Custom Animations
+      </h2>
+
+      <div class="space-y-20">
+        <!-- Custom Keyframes Example -->
+        <div class="flex justify-start md:justify-start">
+          <div
+            class="min-w-[200px] rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-yellow-400 dark:to-orange-500"
+            data-mos="my-custom-keyframes"
+          >
+            my-custom-keyframes
+          </div>
+        </div>
+
+        <!-- Custom Animation Example -->
+        <div class="flex justify-end md:justify-end">
+          <div
+            class="min-w-[200px] rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-rose-400 dark:to-pink-500"
+            data-mos="bouncy"
+          >
+            bouncy animation
+          </div>
+        </div>
+
+        <!-- Custom Easing Examples -->
+        <div class="flex justify-start md:justify-start">
+          <div
+            class="min-w-[200px] rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-teal-400 dark:to-cyan-500"
+            data-mos="fade-up"
+            data-mos-easing="bouncy"
+          >
+            fade-up w/ bouncy easing
+          </div>
+        </div>
+
+        <div class="flex justify-end md:justify-end">
+          <div
+            class="min-w-[200px] rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-violet-400 dark:to-purple-500"
+            data-mos="fade-up"
+            data-mos-easing="dramatic"
+          >
+            fade-up w/ dramatic easing
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { animate } from "motion";
+  import { MOS } from "motion-on-scroll";
+
+  // 1. Register any motion-compatible keyframes
+  MOS.registerKeyframes("my-custom-keyframes", {
+    opacity: [0, 1],
+    rotate: [0, 360],
+  });
+
+  // 2. Register custom easings for testing
+  MOS.registerEasing("bouncy", [0.68, -0.55, 0.265, 1.55]); // Bouncy back easing
+  MOS.registerEasing("dramatic", "cubic-bezier(0.25, 0.46, 0.45, 0.94)"); // Parsed cubic-bezier
+
+  // 3. Register an entire animation
+  MOS.registerAnimation("bouncy", (el, opts) =>
+    animate(
+      el,
+      { opacity: [0, 1], scale: [0.4, 1] },
+      {
+        type: "spring",
+        bounce: 0.5,
+        duration: opts.timeUnits === "s" ? opts.duration : opts.duration / 1000,
+        delay: opts.timeUnits === "s" ? opts.delay : opts.delay / 1000,
+      },
+    ),
+  );
+
+  MOS.init({
+    easing: "ease-out-cubic",
+    duration: 800,
+    offset: 50,
+    once: false,
+    mirror: false,
+  });
+</script>
+
+<style>
+  /* MOS default visibility helpers – prevents initial flash of un-animated elements */
+
+  /* no pointer events until animation starts */
+  [data-mos] {
+    pointer-events: none;
+  }
+
+  [data-mos].mos-animate {
+    pointer-events: auto;
+  }
+
+  /* fade & zoom presets */
+  [data-mos^="fade"],
+  [data-mos^="zoom"] {
+    will-change: opacity, transform;
+    opacity: 0;
+  }
+
+  /* slide presets */
+  [data-mos^="slide"] {
+    will-change: transform;
+  }
+
+  /* flip presets */
+  [data-mos^="flip"] {
+    will-change: transform;
+    transform: rotateY(-180deg);
+    backface-visibility: hidden;
+  }
+</style>

@@ -4,6 +4,31 @@
 
 import type { EasingKeyword } from "./constants.js";
 
+/**
+ * Represents an element being tracked for scroll-based animations
+ * Contains all state and configuration needed for animation decisions
+ */
+export interface AnimationFlags {
+  /** Whether the element has been animated */
+  animated: boolean;
+  /** Whether the element is currently reversing its animation */
+  isReversing: boolean;
+}
+
+export interface MosElement extends AnimationFlags {
+  /** The DOM element being animated */
+  element: HTMLElement;
+  /** Animation configuration options */
+  options: ElementOptions;
+  /** Scroll positions that trigger animations */
+  position: {
+    /** Scroll position where element should animate in */
+    in: number;
+    /** Scroll position where element should animate out (false if disabled) */
+    out: number | false;
+  };
+}
+
 export type DeviceDisable = boolean | "mobile" | "phone" | "tablet" | (() => boolean);
 
 export interface MosOptions {
@@ -13,7 +38,7 @@ export interface MosOptions {
   duration: number;
   /** Delay before starting the animation */
   delay: number;
-  /** Units for duration and delay ("ms" or "s") */
+  /** Units for duration and delay ("ms" or "s") - defaults to "ms" */
   timeUnits: "ms" | "s";
   /** Travel distance for directional animations in px */
   distance: number;
@@ -21,12 +46,18 @@ export interface MosOptions {
   easing: EasingKeyword | string;
   /** If true, an element animates only once */
   once: boolean;
+  /** If true, elements animate when scrolling up as well as down (requires once: false) */
+  mirror: boolean;
   /** Disable condition */
   disable: DeviceDisable;
   /** If true, automatic DOM MutationObserver is not started */
   disableMutationObserver: boolean;
   /** DOM event that triggers MOS to start. Defaults to "DOMContentLoaded" */
   startEvent: string;
+  /** Throttle delay for scroll events in ms */
+  throttleDelay: number;
+  /** Debounce delay for resize/orientation events in ms */
+  debounceDelay: number;
 }
 
 export type AnchorPlacement =
@@ -47,8 +78,6 @@ export interface ElementOptions extends MosOptions {
   anchor?: string;
   /** 9-grid intersection that decides when the animation triggers */
   anchorPlacement?: AnchorPlacement;
-  /** Direct numeric amount (0–1) passed to inView; overrides anchorPlacement when provided */
-  amount?: number;
 }
 
 export type PartialMosOptions = Partial<MosOptions>;

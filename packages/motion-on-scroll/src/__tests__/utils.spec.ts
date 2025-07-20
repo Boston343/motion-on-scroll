@@ -1,7 +1,7 @@
 import { JSDOM } from "jsdom";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { isDisabled, removeMosAttributes } from "../helpers/utils.js";
+import { debounce, isDisabled, removeMosAttributes, throttle } from "../helpers/utils.js";
 
 describe("utils – isDisabled()", () => {
   // create shared DOM once so window is defined for width checks

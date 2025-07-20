@@ -1,18 +1,9 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { EASINGS } from "../helpers/constants.js";
-
-// Mock `motion` before importing the module under test
-type MockControls = { finished: Promise<void>; stop: () => void };
-vi.mock("motion", () => {
-  return {
-    animate: vi.fn(() => ({ finished: Promise.resolve(), stop: vi.fn() }) as MockControls),
-  };
-});
 import { JSDOM } from "jsdom";
 import * as motion from "motion";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { play, reset } from "../helpers/animations.js";
+import { play } from "../helpers/animations.js";
+import { EASINGS } from "../helpers/constants.js";
 import { DEFAULT_OPTIONS } from "../helpers/constants.js";
 import type { ElementOptions } from "../helpers/types.js";
 
@@ -57,15 +48,6 @@ describe("play/reset", () => {
     expect((opts as any).ease).toEqual(expectedEase);
   });
 
-  it("reset stops controls and cleans class", () => {
-    play(div, makeOpts());
-    const controls = animateSpy.mock.results[0].value;
-    reset(div);
-
-    expect(controls.stop).toHaveBeenCalled();
-    expect(div.classList.contains("mos-animate")).toBe(false);
-  });
-
   it("does not trigger a second animation while one is already running", () => {
     play(div, makeOpts());
     play(div, makeOpts());
@@ -84,7 +66,7 @@ describe("play/reset", () => {
     const DIST = 120;
     play(div, makeOpts({ keyframes: "slide-left", distance: DIST }));
     const [, keyframes] = animateSpy.mock.calls[0];
-    expect((keyframes as any).translateX).toEqual([-DIST, 0]);
+    expect((keyframes as any).translateX).toEqual([DIST, 0]);
   });
 
   /**
@@ -95,27 +77,27 @@ describe("play/reset", () => {
    */
   const DIR_PRESETS: Array<[ElementOptions["keyframes"], "X" | "Y", 1 | -1]> = [
     ["fade-down", "Y", -1],
-    ["fade-left", "X", -1],
-    ["fade-right", "X", 1],
-    ["fade-up-right", "X", 1],
+    ["fade-left", "X", 1],
+    ["fade-right", "X", -1],
+    ["fade-up-right", "X", -1],
     ["fade-up-right", "Y", 1],
-    ["fade-up-left", "X", -1],
+    ["fade-up-left", "X", 1],
     ["fade-up-left", "Y", 1],
-    ["fade-down-right", "X", 1],
+    ["fade-down-right", "X", -1],
     ["fade-down-right", "Y", -1],
-    ["fade-down-left", "X", -1],
+    ["fade-down-left", "X", 1],
     ["fade-down-left", "Y", -1],
     ["slide-up", "Y", 1],
     ["slide-down", "Y", -1],
-    ["slide-right", "X", 1],
+    ["slide-right", "X", -1],
     ["zoom-in-up", "Y", 1],
     ["zoom-out-up", "Y", 1],
     ["zoom-in-down", "Y", -1],
     ["zoom-out-down", "Y", -1],
-    ["zoom-in-left", "X", -1],
-    ["zoom-out-left", "X", -1],
-    ["zoom-in-right", "X", 1],
-    ["zoom-out-right", "X", 1],
+    ["zoom-in-left", "X", 1],
+    ["zoom-out-left", "X", 1],
+    ["zoom-in-right", "X", -1],
+    ["zoom-out-right", "X", -1],
   ];
 
   const DIST = 42;
