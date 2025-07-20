@@ -1,8 +1,8 @@
-import { animate, type AnimationPlaybackControls, type KeyframeOptions } from "motion";
+import { animate, AnimationPlaybackControls, type KeyframeOptions } from "motion";
 
 import { DEFAULT_OPTIONS } from "./constants.js";
 import { resolveEasing } from "./easing.js";
-import { resolveKeyframes } from "./keyframes.js";
+import { getKeyframesWithDistance, resolveKeyframes } from "./keyframes.js";
 import type { ElementOptions } from "./types.js";
 
 const running = new WeakMap<HTMLElement, AnimationPlaybackControls>();
@@ -77,13 +77,66 @@ export function setInitialState(el: HTMLElement, opts: ElementOptions): void {
 }
 
 /**
+ * Set up single completion handler that uses state to determine behavior
+ */
+function setupCompletionHandler(
+  el: HTMLElement,
+  controls: AnimationPlaybackControls,
+  opts: ElementOptions,
+): void {
+  controls.finished
+    .then(() => {
+      const state = elementStates.get(el);
+      if (!state) return;
+
+      if (state.isReversing) {
+        // Handle reverse completion
+
+        // Reset to initial state
+        controls.time = 0;
+        controls.pause();
+        running.delete(el);
+        el.classList.remove("mos-animate");
+        state.isReversing = false;
+        state.hasAnimated = false;
+
+        // Call reverse completion callback if stored
+        const reverseCallback = (state as any).reverseCallback;
+        if (reverseCallback) {
+          reverseCallback();
+          delete (state as any).reverseCallback;
+        }
+      } else {
+        // Handle forward completion
+
+        if (opts.once) {
+          controls.stop();
+          running.delete(el);
+        } else {
+          running.delete(el);
+        }
+      }
+    })
+    .catch(() => {
+      // Animation was cancelled/interrupted - cleanup state
+      const state = elementStates.get(el);
+      if (state) {
+        state.isReversing = false;
+        delete (state as any).reverseCallback;
+      }
+    });
+}
+
+/**
  * Create animation controls for an element without playing
  */
 function createAnimation(el: HTMLElement, opts: ElementOptions): AnimationPlaybackControls | null {
   // Handle custom animations
   const custom = customAnimations[opts.keyframes];
   if (custom) {
-    return custom(el, opts);
+    const controls = custom(el, opts);
+    setupCompletionHandler(el, controls, opts);
+    return controls;
   }
 
   const resolvedKeyframes = resolveKeyframes(opts.keyframes);
@@ -104,12 +157,17 @@ function createAnimation(el: HTMLElement, opts: ElementOptions): AnimationPlayba
   }
   if (easing === null) easing = undefined;
 
-  return animate(el, keyframes, {
+  const controls = animate(el, keyframes, {
     duration: opts.timeUnits === "s" ? opts.duration : opts.duration / 1000,
     delay: opts.timeUnits === "s" ? opts.delay : opts.delay / 1000,
     ease: easing,
     fill: "both",
   } as KeyframeOptions);
+
+  // Set up single completion handler that checks state to determine behavior
+  setupCompletionHandler(el, controls, opts);
+
+  return controls;
 }
 
 /**
@@ -132,120 +190,31 @@ export function setFinalState(el: HTMLElement, opts: ElementOptions): void {
   state.isReversing = false;
 }
 
-/**
- * Get keyframes with custom distance applied
- */
-function getKeyframesWithDistance(opts: ElementOptions, resolvedKeyframes: any): any {
-  let keyframes = resolvedKeyframes;
-
-  switch (opts.keyframes) {
-    case "fade-up":
-      keyframes = { opacity: [0, 1], translateY: [opts.distance, 0] };
-      break;
-    case "fade-down":
-      keyframes = { opacity: [0, 1], translateY: [-opts.distance, 0] };
-      break;
-    case "fade-left":
-      keyframes = { opacity: [0, 1], translateX: [-opts.distance, 0] };
-      break;
-    case "fade-right":
-      keyframes = { opacity: [0, 1], translateX: [opts.distance, 0] };
-      break;
-    // diagonal fades
-    case "fade-up-right":
-      keyframes = {
-        opacity: [0, 1],
-        translateY: [opts.distance, 0],
-        translateX: [opts.distance, 0],
-      };
-      break;
-    case "fade-up-left":
-      keyframes = {
-        opacity: [0, 1],
-        translateY: [opts.distance, 0],
-        translateX: [-opts.distance, 0],
-      };
-      break;
-    case "fade-down-right":
-      keyframes = {
-        opacity: [0, 1],
-        translateY: [-opts.distance, 0],
-        translateX: [opts.distance, 0],
-      };
-      break;
-    case "fade-down-left":
-      keyframes = {
-        opacity: [0, 1],
-        translateY: [-opts.distance, 0],
-        translateX: [-opts.distance, 0],
-      };
-      break;
-    // slides
-    case "slide-up":
-      keyframes = { translateY: [opts.distance, 0] };
-      break;
-    case "slide-down":
-      keyframes = { translateY: [-opts.distance, 0] };
-      break;
-    case "slide-left":
-      keyframes = { translateX: [-opts.distance, 0] };
-      break;
-    case "slide-right":
-      keyframes = { translateX: [opts.distance, 0] };
-      break;
-    // zoom directional
-    case "zoom-in-up":
-    case "zoom-out-up":
-      keyframes = { ...resolvedKeyframes, translateY: [opts.distance, 0] };
-      break;
-    case "zoom-in-down":
-    case "zoom-out-down":
-      keyframes = { ...resolvedKeyframes, translateY: [-opts.distance, 0] };
-      break;
-    case "zoom-in-left":
-    case "zoom-out-left":
-      keyframes = { ...resolvedKeyframes, translateX: [-opts.distance, 0] };
-      break;
-    case "zoom-in-right":
-    case "zoom-out-right":
-      keyframes = { ...resolvedKeyframes, translateX: [opts.distance, 0] };
-      break;
-  }
-
-  return keyframes;
-}
-
 export function play(el: HTMLElement, opts: ElementOptions): void {
+  // Ensure animation controls exist (create only once)
+  const controls = ensureAnimation(el, opts);
+  if (!controls) return;
+
   const existing = running.get(el);
   const state = elementStates.get(el);
 
   // If already animating but not reversing, don't interrupt
-  if (existing && state && !state.isReversing) return;
-
-  // Ensure animation controls exist (create only once)
-  const controls = ensureAnimation(el, opts);
-  if (!controls) return;
+  if (!state || (existing && !state.isReversing)) return;
 
   // Use existing controls and start animation
   controls.speed = 1; // Ensure forward playback
   controls.play(); // Now play the animation
 
   // Update state (reuse existing state variable)
-  const updatedState = elementStates.get(el)!;
-  updatedState.hasAnimated = true;
-  updatedState.isReversing = false;
+  // const updatedState = elementStates.get(el)!;
+  state.hasAnimated = true;
+  state.isReversing = false;
 
   // mark element as animating so CSS can reveal it
   el.classList.add("mos-animate");
   running.set(el, controls);
 
-  controls.finished.then(() => {
-    if (opts.once) {
-      controls.stop();
-    } else {
-      running.delete(el);
-    }
-  });
+  // Completion is now handled by setupCompletionHandler - no need for additional promise here
 }
 
 /**
@@ -256,65 +225,18 @@ export function reverse(el: HTMLElement, onComplete?: () => void): void {
   if (!state?.controls) return;
 
   const controls = state.controls;
-  
-  // Store current time to calculate when reverse should complete
-  const currentTime = controls.time;
 
   // Set to reverse playback
+  state.isReversing = true;
+
+  // Store the completion callback in state for the single completion handler
+  if (onComplete) {
+    (state as any).reverseCallback = onComplete;
+  }
+
   controls.speed = -1;
   controls.play();
-  state.isReversing = true;
 
   // Update running map
   running.set(el, controls);
-
-  // For in-progress animations, we need to manually track completion
-  // because controls.finished might resolve immediately when changing speed
-  const checkReverseComplete = () => {
-    if (!state.isReversing) return; // Animation was interrupted
-    
-    // Check if we've reached the beginning (time = 0)
-    if (controls.time <= 0) {
-      // Reverse is complete, reset to initial state
-      controls.time = 0;
-      controls.pause();
-      running.delete(el);
-      el.classList.remove("mos-animate");
-      state.isReversing = false;
-      state.hasAnimated = false;
-      
-      // Notify scroll handler that reverse is complete
-      if (onComplete) {
-        onComplete();
-      }
-    } else {
-      // Continue checking
-      requestAnimationFrame(checkReverseComplete);
-    }
-  };
-  
-  // Start checking for completion
-  requestAnimationFrame(checkReverseComplete);
-}
-
-export function reset(el: HTMLElement): void {
-  const controls = running.get(el);
-  if (controls) {
-    controls.stop();
-    running.delete(el);
-  }
-
-  const state = elementStates.get(el);
-  if (state?.controls) {
-    // Stop the animation and let CSS handle the reset to initial visibility
-    state.controls.stop();
-    state.hasAnimated = false;
-    state.isReversing = false;
-  } else {
-    // Fallback to clearing styles
-    el.style.opacity = "";
-    el.style.transform = "";
-  }
-
-  el.classList.remove("mos-animate");
 }

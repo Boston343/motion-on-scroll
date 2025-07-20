@@ -3,7 +3,7 @@
  * Replaces Motion's inView with direct scroll event handling
  */
 
-import { play, reset, reverse, setFinalState, setInitialState } from "./animations.js";
+import { play, reverse, setFinalState, setInitialState } from "./animations.js";
 import { DEFAULT_OPTIONS } from "./constants.js";
 import { getPositionIn, getPositionOut, isElementAboveViewport } from "./position-calculator.js";
 import { getScrollDirection } from "./scroll-tracker.js";
@@ -34,8 +34,7 @@ function applyAnimationState(mosEl: MosElement, scrollY: number): void {
   const { element, options, position } = mosEl;
 
   const hide = () => {
-    if (!mosEl.animated) return;
-    console.log("Hiding element (reverse):", element);
+    if (!mosEl.animated || mosEl.isReversing) return;
     reverse(element, () => {
       // Callback: sync scroll handler state when reverse completes
       mosEl.animated = false;
@@ -47,8 +46,6 @@ function applyAnimationState(mosEl: MosElement, scrollY: number): void {
 
   const show = () => {
     if (mosEl.animated && !mosEl.isReversing) return;
-    
-    console.log("Showing element (play):", element);
     play(element, options);
     mosEl.animated = true;
     mosEl.isReversing = false;
