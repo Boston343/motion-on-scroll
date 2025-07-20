@@ -93,9 +93,6 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
   ) {
     hideElement();
   } else if (position.in !== undefined && scrollY >= position.in) {
-    // console.log("showElement", elementData, scrollY);
-    console.log("scrollY", scrollY);
-    console.log("position.in", position.in);
     showElement();
   } else if (elementData.animated && !options.once) {
     hideElement();
