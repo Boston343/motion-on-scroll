@@ -75,8 +75,6 @@ export interface ElementOptions extends MosOptions {
   anchor?: string;
   /** 9-grid intersection that decides when the animation triggers */
   anchorPlacement?: AnchorPlacement;
-  /** Direct numeric amount (0–1) passed to inView; overrides anchorPlacement when provided */
-  amount?: number;
 }
 
 export type PartialMosOptions = Partial<MosOptions>;

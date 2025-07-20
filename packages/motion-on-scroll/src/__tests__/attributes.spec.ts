@@ -45,7 +45,6 @@ describe("resolveElementOptions", () => {
     expect(opts.disable).toBe(false);
     expect(opts.anchor).toBe(undefined);
     expect(opts.anchorPlacement).toBe(undefined);
-    expect(opts.amount).toBe(undefined);
     expect(opts.keyframes).toBe("fade");
   });
 

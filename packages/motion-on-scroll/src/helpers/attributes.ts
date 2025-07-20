@@ -17,7 +17,6 @@ export function resolveElementOptions(el: HTMLElement, global: PartialMosOptions
     duration: readNumber(el, `${DATA_PREFIX}Duration`),
     delay: readNumber(el, `${DATA_PREFIX}Delay`),
     distance: readNumber(el, `${DATA_PREFIX}Distance`),
-    amount: readNumber(el, `${DATA_PREFIX}Amount`),
     easing: el.dataset[`${DATA_PREFIX}Easing` as any],
     anchor: el.dataset[`${DATA_PREFIX}Anchor` as any],
     once: el.hasAttribute(`data-${DATA_PREFIX}-once`)

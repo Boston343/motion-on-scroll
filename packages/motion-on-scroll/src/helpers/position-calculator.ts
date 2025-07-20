@@ -36,39 +36,34 @@ export function getPositionIn(el: HTMLElement, opts: ElementOptions): number {
   let triggerPoint = getElementOffset(triggerEl).top - windowHeight;
 
   // Handle anchor placement (9-grid system)
-  if (opts.anchorPlacement) {
-    switch (opts.anchorPlacement) {
-      case "top-bottom":
-        // Default - no adjustment needed
-        break;
-      case "center-bottom":
-        triggerPoint += triggerEl.offsetHeight / 2;
-        break;
-      case "bottom-bottom":
-        triggerPoint += triggerEl.offsetHeight;
-        break;
-      case "top-center":
-        triggerPoint += windowHeight / 2;
-        break;
-      case "center-center":
-        triggerPoint += windowHeight / 2 + triggerEl.offsetHeight / 2;
-        break;
-      case "bottom-center":
-        triggerPoint += windowHeight / 2 + triggerEl.offsetHeight;
-        break;
-      case "top-top":
-        triggerPoint += windowHeight;
-        break;
-      case "bottom-top":
-        triggerPoint += windowHeight + triggerEl.offsetHeight;
-        break;
-      case "center-top":
-        triggerPoint += windowHeight + triggerEl.offsetHeight / 2;
-        break;
-    }
-  } else if (typeof opts.amount === "number") {
-    // Handle direct amount (0-1 fraction)
-    triggerPoint += windowHeight * (1 - opts.amount);
+  switch (opts.anchorPlacement) {
+    case "top-bottom":
+      // Default - no adjustment needed
+      break;
+    case "center-bottom":
+      triggerPoint += triggerEl.offsetHeight / 2;
+      break;
+    case "bottom-bottom":
+      triggerPoint += triggerEl.offsetHeight;
+      break;
+    case "top-center":
+      triggerPoint += windowHeight / 2;
+      break;
+    case "center-center":
+      triggerPoint += windowHeight / 2 + triggerEl.offsetHeight / 2;
+      break;
+    case "bottom-center":
+      triggerPoint += windowHeight / 2 + triggerEl.offsetHeight;
+      break;
+    case "top-top":
+      triggerPoint += windowHeight;
+      break;
+    case "bottom-top":
+      triggerPoint += windowHeight + triggerEl.offsetHeight;
+      break;
+    case "center-top":
+      triggerPoint += windowHeight + triggerEl.offsetHeight / 2;
+      break;
   }
 
   return triggerPoint + opts.offset;
