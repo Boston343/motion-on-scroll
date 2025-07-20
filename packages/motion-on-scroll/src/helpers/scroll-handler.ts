@@ -26,6 +26,11 @@ let trackedElements: MosElement[] = [];
 let activeScrollHandler: ((...args: any[]) => void) | null = null;
 
 /**
+ * Reference to the active (debounced) resize/orientation handler (for cleanup)
+ */
+let activeResizeHandler: ((...args: any[]) => void) | null = null;
+
+/**
  * Current throttle delay for scroll events (configurable)
  */
 let currentThrottleDelay = DEFAULT_OPTIONS.throttleDelay;
@@ -308,8 +313,9 @@ function ensureScrollHandlerActive(): void {
   // Set up event listeners
   setupScrollEventListeners(throttledScrollHandler, debouncedPositionRecalculator);
 
-  // Store reference for cleanup
+  // Store references for cleanup
   activeScrollHandler = throttledScrollHandler;
+  activeResizeHandler = debouncedPositionRecalculator;
 
   // Process current scroll position immediately
   processScrollEvent();
@@ -340,11 +346,14 @@ export function cleanupScrollHandler(): void {
   if (activeScrollHandler) {
     // Remove all event listeners
     window.removeEventListener("scroll", activeScrollHandler);
-    window.removeEventListener("resize", recalculateAllPositions);
-    window.removeEventListener("orientationchange", recalculateAllPositions);
+    if (activeResizeHandler) {
+      window.removeEventListener("resize", activeResizeHandler);
+      window.removeEventListener("orientationchange", activeResizeHandler);
+    }
 
-    // Clear handler reference
+    // Clear handler references
     activeScrollHandler = null;
+    activeResizeHandler = null;
   }
 
   // Clear all tracked elements
