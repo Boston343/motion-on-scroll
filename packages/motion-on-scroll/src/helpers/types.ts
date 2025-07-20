@@ -21,6 +21,8 @@ export interface MosOptions {
   easing: EasingKeyword | string;
   /** If true, an element animates only once */
   once: boolean;
+  /** If true, elements animate when scrolling up as well as down (requires once: false) */
+  mirror: boolean;
   /** Disable condition */
   disable: DeviceDisable;
   /** If true, automatic DOM MutationObserver is not started */

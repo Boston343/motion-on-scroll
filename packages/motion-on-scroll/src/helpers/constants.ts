@@ -13,6 +13,7 @@ export const DEFAULT_OPTIONS: MosOptions = {
   delay: 0,
   easing: "ease",
   once: false,
+  mirror: false,
   disable: false,
   disableMutationObserver: false,
   timeUnits: "ms",
