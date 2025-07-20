@@ -2,9 +2,11 @@
 
 [![NPM version](https://img.shields.io/npm/v/motion-on-scroll.svg?style=flat)](https://npmjs.org/package/motion-on-scroll) [![NPM downloads](https://img.shields.io/npm/dm/motion-on-scroll.svg?style=flat)](https://npmjs.org/package/motion-on-scroll) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Twitter Follow](https://img.shields.io/twitter/follow/webreaper.svg?style=social)](https://twitter.com/webreaper)
 
+## Note: this is currently in beta - there are still various items to be ironed out. Feel free to try it though :)
+
 Effortless, AOS-compatible scroll animations powered by [Motion](https://motion.dev).
 
-Framework-agnostic, MOS lets you add scroll-triggered animations with nothing but `data-mos` attributes. Under the hood it uses Motion’s powerful `inView` + `animate` APIs, giving you:
+Framework-agnostic, MOS lets you add scroll-triggered animations with nothing but `data-mos` attributes. Under the hood it uses Motion’s powerful `animate` API, giving you:
 
 - 27 preset effects out of the box
 - Support for custom keyframes, easings, and fully bespoke timelines
