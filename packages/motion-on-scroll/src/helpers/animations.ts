@@ -348,6 +348,7 @@ function resolveAnimationEasing(options: ElementOptions): any {
 /**
  * Sets an element to its final animation state instantly
  * Used for elements that are above the viewport on page load
+ * Uses Motion's complete() method to properly set final state for smooth reversal
  *
  * @param element - The DOM element to set final state for
  * @param options - Animation configuration options
@@ -356,9 +357,9 @@ export function setFinalState(element: HTMLElement, options: ElementOptions): vo
   const controls = ensureAnimationControls(element, options);
   if (!controls) return;
 
-  // Jump to final animation state
-  controls.time = controls.duration;
-  controls.pause();
+  // Use Motion's complete() method to properly reach final state
+  // This ensures the animation is in the correct state for smooth reversal
+  controls.complete();
 
   // Mark element as animated and add CSS class
   element.classList.add("mos-animate");
