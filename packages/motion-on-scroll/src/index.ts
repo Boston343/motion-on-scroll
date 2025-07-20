@@ -61,7 +61,7 @@ function findMosElements(): HTMLElement[] {
  * @param element - The DOM element to observe
  * @param options - Animation options for this element
  */
-function observeElementOnce(element: HTMLElement, options: ElementOptions): void {
+export function observeElementOnce(element: HTMLElement, options: ElementOptions): void {
   // Skip if already observing this element
   if (observedElements.has(element)) return;
 
@@ -77,7 +77,7 @@ function observeElementOnce(element: HTMLElement, options: ElementOptions): void
  * Processes all current MOS elements in the DOM
  * Resolves their options and starts observing them
  */
-function processAllElements(): HTMLElement[] {
+export function processAllElements(): HTMLElement[] {
   const elements = findMosElements();
 
   elements.forEach((element) => {
@@ -96,7 +96,7 @@ function processAllElements(): HTMLElement[] {
  * Configures and starts the scroll detection system
  * This includes throttling, scroll tracking, and element preparation
  */
-function initializeScrollSystem(): void {
+export function initializeScrollSystem(): void {
   // Configure performance settings from library config
   updateScrollHandlerDelays(
     libraryConfig.throttleDelay ?? DEFAULT_OPTIONS.throttleDelay,
@@ -118,7 +118,7 @@ function initializeScrollSystem(): void {
  * Recalculates element positions after layout changes
  * Called on window resize and orientation change
  */
-function handleLayoutChange(): void {
+export function handleLayoutChange(): void {
   if (isLibraryActive) {
     refreshElements();
   }
@@ -132,7 +132,7 @@ function handleLayoutChange(): void {
  * Starts observing DOM changes to detect new MOS elements
  * Only runs if mutation observer is not disabled in config
  */
-function startDomObserver(): void {
+export function startDomObserver(): void {
   if (libraryConfig.disableMutationObserver || typeof MutationObserver === "undefined") {
     return;
   }
@@ -148,28 +148,6 @@ function startDomObserver(): void {
 // ===================================================================
 // LIBRARY LIFECYCLE MANAGEMENT
 // ===================================================================
-
-/**
- * Starts the library systems (scroll detection, DOM observation, etc.)
- * Only runs once - subsequent calls are ignored
- */
-function startLibrarySystems(): void {
-  // Prevent multiple initializations
-  if (isLibraryActive) return;
-  isLibraryActive = true;
-
-  // Handle global disable - clean up and exit early
-  if (isDisabled(libraryConfig.disable ?? false)) {
-    findMosElements().forEach(removeMosAttributes);
-    return;
-  }
-
-  // Start DOM mutation observer
-  startDomObserver();
-
-  // Initialize scroll detection system
-  initializeScrollSystem();
-}
 
 /**
  * Refreshes the library state and re-processes elements
@@ -237,15 +215,24 @@ function setupLayoutChangeListeners(): void {
  * Sets up the start event listener based on configuration
  * Handles both standard events (DOMContentLoaded, load) and custom events
  */
-function setupStartEventListener(): void {
+export function setupStartEventListener(): void {
   const startEvent = libraryConfig.startEvent ?? DEFAULT_OPTIONS.startEvent;
 
-  if (["DOMContentLoaded", "load"].includes(startEvent)) {
-    // Use DOMContentLoaded for standard events
-    window.addEventListener("DOMContentLoaded", () => refreshLibrary(true));
+  // If the desired event has already fired, bootstrap immediately
+  if (
+    (startEvent === "DOMContentLoaded" &&
+      ["interactive", "complete"].includes(document.readyState)) ||
+    (startEvent === "load" && document.readyState === "complete")
+  ) {
+    refreshLibrary(true);
+    return;
+  }
+
+  // Otherwise, attach listener for the start event
+  if (startEvent === "load") {
+    window.addEventListener(startEvent, () => refreshLibrary(true), { once: true });
   } else {
-    // Listen for custom start event
-    document.addEventListener(startEvent, () => refreshLibrary(true));
+    document.addEventListener(startEvent, () => refreshLibrary(true), { once: true });
   }
 }
 
