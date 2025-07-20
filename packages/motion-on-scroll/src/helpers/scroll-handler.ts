@@ -8,7 +8,7 @@
 import { play, reverse, setFinalState, setInitialState } from "./animations.js";
 import { DEFAULT_OPTIONS } from "./constants.js";
 import { getPositionIn, getPositionOut, isElementAboveViewport } from "./position-calculator.js";
-import type { MosElement, ElementOptions } from "./types.js";
+import type { ElementOptions, MosElement } from "./types.js";
 import { debounce, throttle } from "./utils.js";
 
 // ===================================================================

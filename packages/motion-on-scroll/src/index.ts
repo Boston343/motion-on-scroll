@@ -9,6 +9,7 @@ import { resolveElementOptions } from "./helpers/attributes.js";
 import { DEFAULT_OPTIONS } from "./helpers/constants.js";
 import { registerEasing } from "./helpers/easing.js";
 import { registerKeyframes } from "./helpers/keyframes.js";
+import { startDomObserver } from "./helpers/observer.js";
 import {
   cleanupScrollHandler,
   observeElement as startObservingElement,
@@ -31,11 +32,6 @@ let libraryConfig: PartialMosOptions = {};
  * Tracks whether the library has been initialized and is actively running
  */
 let isLibraryActive = false;
-
-/**
- * DOM mutation observer for detecting new elements added to the page
- */
-let domObserver: MutationObserver | null = null;
 
 /**
  * Set of elements already being observed to prevent duplicate observations
@@ -120,27 +116,6 @@ export function handleLayoutChange(): void {
 }
 
 // ===================================================================
-// DOM MUTATION HANDLING
-// ===================================================================
-
-/**
- * Starts observing DOM changes to detect new MOS elements
- * Only runs if mutation observer is not disabled in config
- */
-export function startDomObserver(): void {
-  if (libraryConfig.disableMutationObserver || typeof MutationObserver === "undefined") {
-    return;
-  }
-
-  // Clean up existing observer
-  domObserver?.disconnect();
-
-  // Create new observer that triggers a hard refresh when DOM changes
-  domObserver = new MutationObserver(() => refreshHard());
-  domObserver.observe(document.body, { childList: true, subtree: true });
-}
-
-// ===================================================================
 // CONFIGURATION AND TIME UNITS
 // ===================================================================
 
@@ -199,6 +174,10 @@ export function setupStartEventListener(): void {
     document.addEventListener(startEvent, () => refresh(true), { once: true });
   }
 
+  // Don't start mutation observer if disabled or not supported
+  if (libraryConfig.disableMutationObserver || typeof MutationObserver === "undefined") {
+    return;
+  }
   startDomObserver();
 }
 
