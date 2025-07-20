@@ -41,38 +41,38 @@ export function getKeyframesWithDistance(opts: ElementOptions, resolvedKeyframes
       keyframes = { opacity: [0, 1], translateY: [-opts.distance, 0] };
       break;
     case "fade-left":
-      keyframes = { opacity: [0, 1], translateX: [-opts.distance, 0] };
+      keyframes = { opacity: [0, 1], translateX: [opts.distance, 0] };
       break;
     case "fade-right":
-      keyframes = { opacity: [0, 1], translateX: [opts.distance, 0] };
+      keyframes = { opacity: [0, 1], translateX: [-opts.distance, 0] };
       break;
     // diagonal fades
     case "fade-up-right":
       keyframes = {
         opacity: [0, 1],
         translateY: [opts.distance, 0],
-        translateX: [opts.distance, 0],
+        translateX: [-opts.distance, 0],
       };
       break;
     case "fade-up-left":
       keyframes = {
         opacity: [0, 1],
         translateY: [opts.distance, 0],
-        translateX: [-opts.distance, 0],
+        translateX: [opts.distance, 0],
       };
       break;
     case "fade-down-right":
       keyframes = {
         opacity: [0, 1],
         translateY: [-opts.distance, 0],
-        translateX: [opts.distance, 0],
+        translateX: [-opts.distance, 0],
       };
       break;
     case "fade-down-left":
       keyframes = {
         opacity: [0, 1],
         translateY: [-opts.distance, 0],
-        translateX: [-opts.distance, 0],
+        translateX: [opts.distance, 0],
       };
       break;
     // slides
@@ -83,10 +83,10 @@ export function getKeyframesWithDistance(opts: ElementOptions, resolvedKeyframes
       keyframes = { translateY: [-opts.distance, 0] };
       break;
     case "slide-left":
-      keyframes = { translateX: [-opts.distance, 0] };
+      keyframes = { translateX: [opts.distance, 0] };
       break;
     case "slide-right":
-      keyframes = { translateX: [opts.distance, 0] };
+      keyframes = { translateX: [-opts.distance, 0] };
       break;
     // zoom directional
     case "zoom-in-up":
@@ -99,11 +99,11 @@ export function getKeyframesWithDistance(opts: ElementOptions, resolvedKeyframes
       break;
     case "zoom-in-left":
     case "zoom-out-left":
-      keyframes = { ...resolvedKeyframes, translateX: [-opts.distance, 0] };
+      keyframes = { ...resolvedKeyframes, translateX: [opts.distance, 0] };
       break;
     case "zoom-in-right":
     case "zoom-out-right":
-      keyframes = { ...resolvedKeyframes, translateX: [opts.distance, 0] };
+      keyframes = { ...resolvedKeyframes, translateX: [-opts.distance, 0] };
       break;
   }
 
