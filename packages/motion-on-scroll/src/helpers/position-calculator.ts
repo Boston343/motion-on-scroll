@@ -3,7 +3,7 @@
  * Calculates element trigger positions based on natural document position
  */
 
-import type { AnchorPlacement, ElementOptions } from "./types.js";
+import type { ElementOptions } from "./types.js";
 
 /**
  * Get element's natural offset position (ignoring transforms)
@@ -87,3 +87,10 @@ export function isElementAboveViewport(el: HTMLElement): boolean {
   const elementBottom = elementOffset.top + el.offsetHeight;
   return elementBottom < window.scrollY;
 }
+
+export default {
+  isElementAboveViewport,
+  getPositionOut,
+  getPositionIn,
+  getElementOffset,
+};

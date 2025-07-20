@@ -184,7 +184,7 @@ function calculateElementTriggerPositions(elementData: MosElement): void {
 function setElementInitialState(elementData: MosElement): void {
   const { element, options } = elementData;
 
-  if (isElementAboveViewport(element)) {
+  if (isElementAboveViewport(element) && !options.mirror) {
     // Element is above viewport - set to final animated state immediately
     setFinalState(element, options);
     elementData.animated = true;

@@ -8,7 +8,14 @@ import type { EasingKeyword } from "./constants.js";
  * Represents an element being tracked for scroll-based animations
  * Contains all state and configuration needed for animation decisions
  */
-export interface MosElement {
+export interface AnimationFlags {
+  /** Whether the element has been animated */
+  animated: boolean;
+  /** Whether the element is currently reversing its animation */
+  isReversing: boolean;
+}
+
+export interface MosElement extends AnimationFlags {
   /** The DOM element being animated */
   element: HTMLElement;
   /** Animation configuration options */
@@ -20,10 +27,6 @@ export interface MosElement {
     /** Scroll position where element should animate out (false if disabled) */
     out: number | false;
   };
-  /** Whether the element has been animated */
-  animated: boolean;
-  /** Whether the element is currently reversing its animation */
-  isReversing: boolean;
 }
 
 export type DeviceDisable = boolean | "mobile" | "phone" | "tablet" | (() => boolean);
@@ -35,7 +38,7 @@ export interface MosOptions {
   duration: number;
   /** Delay before starting the animation */
   delay: number;
-  /** Units for duration and delay ("ms" or "s") */
+  /** Units for duration and delay ("ms" or "s") - defaults to "ms" */
   timeUnits: "ms" | "s";
   /** Travel distance for directional animations in px */
   distance: number;

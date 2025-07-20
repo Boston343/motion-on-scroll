@@ -10,7 +10,7 @@ import { animate, type AnimationPlaybackControls, type KeyframeOptions } from "m
 import { DEFAULT_OPTIONS } from "./constants.js";
 import { resolveEasing } from "./easing.js";
 import { getKeyframesWithDistance, resolveKeyframes } from "./keyframes.js";
-import type { ElementOptions } from "./types.js";
+import type { AnimationFlags, ElementOptions } from "./types.js";
 
 // ===================================================================
 // TYPES AND INTERFACES
@@ -25,9 +25,9 @@ export type AnimationFactory = (el: HTMLElement, opts: ElementOptions) => Animat
 /**
  * Internal state tracking for each animated element
  */
-interface ElementAnimationState {
+interface ElementAnimationState extends AnimationFlags {
   /** Whether the element has been animated at least once */
-  hasAnimated: boolean;
+  animated: boolean;
   /** Whether the element is currently playing a reverse animation */
   isReversing: boolean;
   /** The Motion animation controls for this element */
@@ -112,7 +112,7 @@ function ensureAnimationControls(
 
   // Store state with new controls
   elementAnimationStates.set(element, {
-    hasAnimated: false,
+    animated: false,
     isReversing: false,
     controls,
   });
@@ -145,7 +145,7 @@ export function setInitialState(element: HTMLElement, options: ElementOptions): 
 
   // Update element state
   const state = elementAnimationStates.get(element)!;
-  state.hasAnimated = false;
+  state.animated = false;
   state.isReversing = false;
 }
 
@@ -195,7 +195,7 @@ function handleReverseAnimationCompletion(
 
   // Update state
   state.isReversing = false;
-  state.hasAnimated = false;
+  state.animated = false;
 
   // Call reverse completion callback if stored
   const reverseCallback = (state as any).reverseCallback;
@@ -366,7 +366,7 @@ export function setFinalState(element: HTMLElement, options: ElementOptions): vo
 
   // Update element state
   const state = elementAnimationStates.get(element)!;
-  state.hasAnimated = true;
+  state.animated = true;
   state.isReversing = false;
 }
 
@@ -397,7 +397,7 @@ export function play(element: HTMLElement, options: ElementOptions): void {
   controls.play();
 
   // Update state
-  state.hasAnimated = true;
+  state.animated = true;
   state.isReversing = false;
 
   // Add CSS class for styling and mark as actively animating
@@ -431,3 +431,11 @@ export function reverse(element: HTMLElement, onComplete?: () => void): void {
   // Mark as actively animating
   activeAnimations.set(element, controls);
 }
+
+export default {
+  play,
+  reverse,
+  setFinalState,
+  setInitialState,
+  registerAnimation,
+};
