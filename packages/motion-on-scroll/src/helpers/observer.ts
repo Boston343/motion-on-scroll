@@ -1,6 +1,7 @@
 import { inView } from "motion";
 
-import { play, reset } from "./animations.js";
+import { play, reset, setInitialState, setFinalState, reverse } from "./animations.js";
+import { getScrollDirection, isElementAboveViewport } from "./scroll-tracker.js";
 import type { AnchorPlacement, ElementOptions, MarginType } from "./types.js";
 import { isDisabled } from "./utils.js";
 
@@ -53,13 +54,47 @@ export function observeElement(el: HTMLElement, opts: ElementOptions) {
 
   const triggerEl = opts.anchor ? (document.querySelector<HTMLElement>(opts.anchor) ?? el) : el;
 
+  // Check if element is above viewport on initial load and set final state
+  if (isElementAboveViewport(el)) {
+    setFinalState(el, opts);
+    return; // Don't observe elements that are already above viewport
+  }
+
+  // Set initial state immediately when observing
+  setInitialState(el, opts);
+
   inView(
     triggerEl,
-    () => {
-      play(el, opts);
-      if (opts.once) return () => {};
+    (element, entry) => {
+      console.log("Element entering viewport:", element);
+      const scrollDirection = getScrollDirection();
+
+      // Element is entering viewport - only play when scrolling down
+      if (scrollDirection === "down" || scrollDirection === "none") {
+        // Only play animation when scrolling down or no scroll direction
+        play(el, opts);
+      }
+      // If scrolling up, don't play - element should already be in final state
+
+      // Return cleanup function that runs when element exits viewport
+      if (opts.once) {
+        return () => {};
+      }
+
       return () => {
-        reset(el);
+        // This cleanup runs when the element exits the viewport
+        console.log("Element exiting viewport:", element);
+        const exitScrollDirection = getScrollDirection();
+
+        if (exitScrollDirection === "up") {
+          // When scrolling up and element exits viewport, reverse the animation
+          console.log("Reversing animation for", element);
+          reverse(el);
+        } else {
+          // When scrolling down and element exits viewport, reset normally
+          // console.log("Resetting animation for", element);
+          // reset(el);
+        }
       };
     },
     {

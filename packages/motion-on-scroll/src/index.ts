@@ -4,6 +4,7 @@ import { DEFAULT_OPTIONS } from "./helpers/constants.js";
 import { registerEasing } from "./helpers/easing.js";
 import { registerKeyframes } from "./helpers/keyframes.js";
 import { observeElement } from "./helpers/observer.js";
+import { initScrollTracker } from "./helpers/scroll-tracker.js";
 
 // Track elements already observed to avoid duplicate observations
 const _observedEls = new WeakSet<HTMLElement>();
@@ -34,6 +35,9 @@ function bootstrap() {
     collectElements().forEach(removeMosAttributes);
     return;
   }
+
+  // Initialize scroll direction tracking
+  initScrollTracker();
 
   // Start MutationObserver unless disabled
   if (!globalOptions.disableMutationObserver && typeof MutationObserver !== "undefined") {
