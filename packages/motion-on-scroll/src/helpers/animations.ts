@@ -6,11 +6,14 @@ import { resolveKeyframes } from "./keyframes.js";
 import type { ElementOptions } from "./types.js";
 
 const running = new WeakMap<HTMLElement, AnimationPlaybackControls>();
-const elementStates = new WeakMap<HTMLElement, {
-  hasAnimated: boolean;
-  isReversing: boolean;
-  controls?: AnimationPlaybackControls;
-}>();
+const elementStates = new WeakMap<
+  HTMLElement,
+  {
+    hasAnimated: boolean;
+    isReversing: boolean;
+    controls?: AnimationPlaybackControls;
+  }
+>();
 
 // ------------------- Custom animation registry -------------------
 export type AnimationFactory = (el: HTMLElement, opts: ElementOptions) => AnimationPlaybackControls;
@@ -49,7 +52,7 @@ export function setInitialState(el: HTMLElement, opts: ElementOptions): void {
   elementStates.set(el, {
     hasAnimated: false,
     isReversing: false,
-    controls
+    controls,
   });
 }
 
@@ -105,7 +108,7 @@ export function setFinalState(el: HTMLElement, opts: ElementOptions): void {
   elementStates.set(el, {
     hasAnimated: true,
     isReversing: false,
-    controls
+    controls,
   });
 }
 
@@ -115,17 +118,17 @@ export function setFinalState(el: HTMLElement, opts: ElementOptions): void {
 export function reverse(el: HTMLElement): void {
   const state = elementStates.get(el);
   if (!state?.controls) return;
-  
+
   const controls = state.controls;
-  
+
   // Set to reverse playback
   controls.speed = -1;
   controls.play();
   state.isReversing = true;
-  
+
   // Update running map
   running.set(el, controls);
-  
+
   // When reverse completes, reset to initial state
   controls.finished.then(() => {
     if (state.isReversing) {
@@ -144,7 +147,7 @@ export function reverse(el: HTMLElement): void {
  */
 function getKeyframesWithDistance(opts: ElementOptions, resolvedKeyframes: any): any {
   let keyframes = resolvedKeyframes;
-  
+
   switch (opts.keyframes) {
     case "fade-up":
       keyframes = { opacity: [0, 1], translateY: [opts.distance, 0] };
@@ -218,17 +221,17 @@ function getKeyframesWithDistance(opts: ElementOptions, resolvedKeyframes: any):
       keyframes = { ...resolvedKeyframes, translateX: [opts.distance, 0] };
       break;
   }
-  
+
   return keyframes;
 }
 
 export function play(el: HTMLElement, opts: ElementOptions): void {
   const existing = running.get(el);
   if (existing) return; // already animating
-  
+
   const state = elementStates.get(el);
   let controls: AnimationPlaybackControls;
-  
+
   if (state?.controls) {
     // Use existing controls and start animation from beginning
     controls = state.controls;
@@ -241,15 +244,15 @@ export function play(el: HTMLElement, opts: ElementOptions): void {
     // Create new animation and play immediately
     const newControls = createAnimation(el, opts);
     if (!newControls) return;
-    
+
     controls = newControls;
     // Animation starts playing immediately when created
-    
+
     // Store state
     elementStates.set(el, {
       hasAnimated: true,
       isReversing: false,
-      controls
+      controls,
     });
   }
 
@@ -272,7 +275,7 @@ export function reset(el: HTMLElement): void {
     controls.stop();
     running.delete(el);
   }
-  
+
   const state = elementStates.get(el);
   if (state?.controls) {
     // Stop the animation and let CSS handle the reset to initial visibility
@@ -284,6 +287,6 @@ export function reset(el: HTMLElement): void {
     el.style.opacity = "";
     el.style.transform = "";
   }
-  
+
   el.classList.remove("mos-animate");
 }

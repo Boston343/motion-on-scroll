@@ -1,7 +1,4 @@
-import { inView } from "motion";
-
-import { play, reset, setInitialState, setFinalState, reverse } from "./animations.js";
-import { getScrollDirection, isElementAboveViewport } from "./scroll-tracker.js";
+import { observeElement as observeElementWithScrollHandler } from "./scroll-handler.js";
 import type { AnchorPlacement, ElementOptions, MarginType } from "./types.js";
 import { isDisabled } from "./utils.js";
 
@@ -36,70 +33,14 @@ export function computeIOOptions(
 }
 
 /**
- * Observe an element (or its anchor) with the correct Intersection Observer
- * options based on the element's per-element settings.
+ * Observe an element using custom AOS-style scroll detection
+ * This replaces Motion's inView with direct scroll event handling
  */
 export function observeElement(el: HTMLElement, opts: ElementOptions) {
   if (isDisabled(opts.disable)) {
     return; // Skip observing entirely when disabled
   }
 
-  const { margin, amount } =
-    typeof opts.amount === "number"
-      ? {
-          margin: `${opts.offset}px 0px -${opts.offset}px 0px` as MarginType,
-          amount: opts.amount,
-        }
-      : computeIOOptions(opts.anchorPlacement as AnchorPlacement | undefined, opts.offset);
-
-  const triggerEl = opts.anchor ? (document.querySelector<HTMLElement>(opts.anchor) ?? el) : el;
-
-  // Check if element is above viewport on initial load and set final state
-  if (isElementAboveViewport(el)) {
-    setFinalState(el, opts);
-    return; // Don't observe elements that are already above viewport
-  }
-
-  // Set initial state immediately when observing
-  setInitialState(el, opts);
-
-  inView(
-    triggerEl,
-    (element, entry) => {
-      console.log("Element entering viewport:", element);
-      const scrollDirection = getScrollDirection();
-
-      // Element is entering viewport - only play when scrolling down
-      if (scrollDirection === "down" || scrollDirection === "none") {
-        // Only play animation when scrolling down or no scroll direction
-        play(el, opts);
-      }
-      // If scrolling up, don't play - element should already be in final state
-
-      // Return cleanup function that runs when element exits viewport
-      if (opts.once) {
-        return () => {};
-      }
-
-      return () => {
-        // This cleanup runs when the element exits the viewport
-        console.log("Element exiting viewport:", element);
-        const exitScrollDirection = getScrollDirection();
-
-        if (exitScrollDirection === "up") {
-          // When scrolling up and element exits viewport, reverse the animation
-          console.log("Reversing animation for", element);
-          reverse(el);
-        } else {
-          // When scrolling down and element exits viewport, reset normally
-          // console.log("Resetting animation for", element);
-          // reset(el);
-        }
-      };
-    },
-    {
-      margin,
-      amount,
-    },
-  );
+  // Use the custom scroll handler instead of Motion's inView
+  observeElementWithScrollHandler(el, opts);
 }

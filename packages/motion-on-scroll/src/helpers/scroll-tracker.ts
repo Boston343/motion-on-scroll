@@ -2,41 +2,51 @@
  * Scroll direction tracking utility with throttling
  */
 
+import { DEFAULT_OPTIONS } from "./constants.js";
+import { throttle } from "./utils.js";
+
 type ScrollDirection = "up" | "down" | "none";
 type ScrollCallback = (direction: ScrollDirection) => void;
 
 let lastScrollY = 0;
 let currentDirection: ScrollDirection = "none";
 const scrollCallbacks = new Set<ScrollCallback>();
-let throttleTimer: number | null = null;
 let isInitialized = false;
+let throttledScrollHandler: (() => void) | null = null;
+let currentThrottleDelay = DEFAULT_OPTIONS.throttleDelay;
 
-// const THROTTLE_MS = 16; // ~60fps
-const THROTTLE_MS = 99; // match AOS
+function handleScrollInternal() {
+  const currentScrollY = window.scrollY;
+  const previousDirection = currentDirection;
 
-function handleScroll() {
-  if (throttleTimer) return;
+  if (currentScrollY > lastScrollY && currentScrollY > 0) {
+    currentDirection = "down";
+  } else if (currentScrollY < lastScrollY) {
+    currentDirection = "up";
+  } else {
+    currentDirection = "none";
+  }
 
-  throttleTimer = window.setTimeout(() => {
-    const currentScrollY = window.scrollY;
-    const previousDirection = currentDirection;
+  // Only notify if direction changed
+  if (previousDirection !== currentDirection) {
+    scrollCallbacks.forEach((callback) => callback(currentDirection));
+  }
 
-    if (currentScrollY > lastScrollY && currentScrollY > 0) {
-      currentDirection = "down";
-    } else if (currentScrollY < lastScrollY) {
-      currentDirection = "up";
-    } else {
-      currentDirection = "none";
-    }
+  lastScrollY = currentScrollY;
+}
 
-    // Only notify if direction changed
-    if (previousDirection !== currentDirection) {
-      scrollCallbacks.forEach((callback) => callback(currentDirection));
-    }
+/**
+ * Update throttle delay for scroll tracking
+ */
+export function updateScrollTrackerDelay(throttleDelay: number): void {
+  currentThrottleDelay = throttleDelay;
 
-    lastScrollY = currentScrollY;
-    throttleTimer = null;
-  }, THROTTLE_MS);
+  // If already initialized, recreate the throttled handler
+  if (isInitialized && throttledScrollHandler) {
+    window.removeEventListener("scroll", throttledScrollHandler);
+    throttledScrollHandler = throttle(handleScrollInternal, currentThrottleDelay);
+    window.addEventListener("scroll", throttledScrollHandler, { passive: true });
+  }
 }
 
 /**
@@ -46,7 +56,8 @@ export function initScrollTracker(): void {
   if (isInitialized) return;
 
   lastScrollY = window.scrollY;
-  window.addEventListener("scroll", handleScroll, { passive: true });
+  throttledScrollHandler = throttle(handleScrollInternal, currentThrottleDelay);
+  window.addEventListener("scroll", throttledScrollHandler, { passive: true });
   isInitialized = true;
 }
 
@@ -70,24 +81,15 @@ export function onScrollDirectionChange(callback: ScrollCallback): () => void {
 }
 
 /**
- * Check if element is above the current viewport
- */
-export function isElementAboveViewport(element: HTMLElement): boolean {
-  const rect = element.getBoundingClientRect();
-  return rect.bottom < 0;
-}
-
-/**
  * Cleanup scroll tracker
  */
 export function cleanupScrollTracker(): void {
   if (!isInitialized) return;
 
-  window.removeEventListener("scroll", handleScroll);
-  scrollCallbacks.clear();
-  if (throttleTimer) {
-    clearTimeout(throttleTimer);
-    throttleTimer = null;
+  if (throttledScrollHandler) {
+    window.removeEventListener("scroll", throttledScrollHandler);
   }
+  scrollCallbacks.clear();
+  throttledScrollHandler = null;
   isInitialized = false;
 }

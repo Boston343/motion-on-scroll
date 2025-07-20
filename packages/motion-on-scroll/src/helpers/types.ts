@@ -27,6 +27,10 @@ export interface MosOptions {
   disableMutationObserver: boolean;
   /** DOM event that triggers MOS to start. Defaults to "DOMContentLoaded" */
   startEvent: string;
+  /** Throttle delay for scroll events in ms */
+  throttleDelay: number;
+  /** Debounce delay for resize/orientation events in ms */
+  debounceDelay: number;
 }
 
 export type AnchorPlacement =

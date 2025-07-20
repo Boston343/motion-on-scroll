@@ -18,6 +18,10 @@ export const DEFAULT_OPTIONS: MosOptions = {
   timeUnits: "ms",
   /** DOM event that triggers MOS to start */
   startEvent: "DOMContentLoaded",
+  /** Throttle delay for scroll events in ms (matches AOS) */
+  throttleDelay: 99,
+  /** Debounce delay for resize/orientation events in ms (matches AOS) */
+  debounceDelay: 50,
 };
 
 /**

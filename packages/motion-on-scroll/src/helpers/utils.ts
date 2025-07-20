@@ -5,6 +5,57 @@
 import type { DeviceDisable } from "./types.js";
 
 /**
+ * Simple throttle function (no external dependencies)
+ * Ensures function is called at most once per delay period
+ */
+export function throttle<T extends (...args: any[]) => void>(
+  func: T,
+  delay: number,
+): (...args: Parameters<T>) => void {
+  let timeoutId: number | null = null;
+  let lastExecTime = 0;
+
+  return (...args: Parameters<T>) => {
+    const currentTime = Date.now();
+
+    if (currentTime - lastExecTime > delay) {
+      func(...args);
+      lastExecTime = currentTime;
+    } else {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(
+        () => {
+          func(...args);
+          lastExecTime = Date.now();
+          timeoutId = null;
+        },
+        delay - (currentTime - lastExecTime),
+      );
+    }
+  };
+}
+
+/**
+ * Simple debounce function (no external dependencies)
+ * Ensures function is called only after delay period of inactivity
+ */
+export function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  delay: number,
+): (...args: Parameters<T>) => void {
+  let timeoutId: number | null = null;
+
+  return (...args: Parameters<T>) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = window.setTimeout(() => func(...args), delay);
+  };
+}
+
+/**
  * Evaluate whether MOS should be disabled for current environment.
  * Mirrors AOS `disable` option behaviour.
  */
