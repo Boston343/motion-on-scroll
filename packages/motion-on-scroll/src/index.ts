@@ -16,7 +16,7 @@ import {
   refreshElements,
   updateScrollHandlerDelays,
 } from "./helpers/scroll-handler.js";
-import type { ElementOptions, PartialMosOptions } from "./helpers/types.js";
+import type { ElementOptions, MosOptions, PartialMosOptions } from "./helpers/types.js";
 import { debounce, isDisabled, removeMosAttributes } from "./helpers/utils.js";
 
 // ===================================================================
@@ -26,7 +26,7 @@ import { debounce, isDisabled, removeMosAttributes } from "./helpers/utils.js";
 /**
  * Global configuration options merged from all init() calls
  */
-let libraryConfig: PartialMosOptions = {};
+let libraryConfig: MosOptions = DEFAULT_OPTIONS;
 
 /**
  * Tracks whether the library has been initialized and is actively running
@@ -124,7 +124,7 @@ export function handleLayoutChange(): void {
  * Only applied on first initialization when timeUnits is set to "s"
  * @param config - The configuration object to potentially modify
  */
-function adjustTimeUnitsOnFirstInit(config: PartialMosOptions): void {
+function adjustTimeUnitsOnFirstInit(config: MosOptions): void {
   if (isLibraryActive || config.timeUnits !== "s") return;
 
   // Convert default duration from ms to seconds if not explicitly set
