@@ -141,7 +141,7 @@ export function startDomObserver(): void {
   domObserver?.disconnect();
 
   // Create new observer that triggers a hard refresh when DOM changes
-  domObserver = new MutationObserver(() => performHardRefresh());
+  domObserver = new MutationObserver(() => refreshHard());
   domObserver.observe(document.body, { childList: true, subtree: true });
 }
 
@@ -150,19 +150,19 @@ export function startDomObserver(): void {
 // ===================================================================
 
 /**
- * Refreshes the library state and re-processes elements
+ * Refreshes the library state and re-processes all elements
  * @param shouldActivate - Whether this refresh should activate the library
  */
-function refreshLibrary(shouldActivate = false): void {
+function refresh(shouldActivate = false): void {
   if (shouldActivate) isLibraryActive = true;
   if (isLibraryActive) initializeScrollSystem();
 }
 
 /**
- * Performs a complete reset and refresh of the library
- * Cleans up existing state and re-initializes everything
+ * Performs a hard refresh - completely resets and re-initializes the library
+ * Useful when the DOM structure has changed significantly
  */
-function performHardRefresh(): void {
+function refreshHard(): void {
   // Handle global disable - clean up and exit early
   if (isDisabled(libraryConfig.disable ?? false)) {
     findMosElements().forEach(removeMosAttributes);
@@ -173,7 +173,7 @@ function performHardRefresh(): void {
   cleanupScrollHandler();
 
   // Re-initialize everything
-  refreshLibrary();
+  refresh(true);
 }
 
 // ===================================================================
@@ -224,15 +224,15 @@ export function setupStartEventListener(): void {
       ["interactive", "complete"].includes(document.readyState)) ||
     (startEvent === "load" && document.readyState === "complete")
   ) {
-    refreshLibrary(true);
+    refresh(true);
     return;
   }
 
   // Otherwise, attach listener for the start event
   if (startEvent === "load") {
-    window.addEventListener(startEvent, () => refreshLibrary(true), { once: true });
+    window.addEventListener(startEvent, () => refresh(true), { once: true });
   } else {
-    document.addEventListener(startEvent, () => refreshLibrary(true), { once: true });
+    document.addEventListener(startEvent, () => refresh(true), { once: true });
   }
 }
 
@@ -270,22 +270,6 @@ function init(options: PartialMosOptions = {}): HTMLElement[] {
 
   // Return current elements for compatibility
   return findMosElements();
-}
-
-/**
- * Refreshes the library state and re-processes all elements
- * @param shouldActivate - Whether this refresh should activate the library
- */
-function refresh(shouldActivate = false): void {
-  refreshLibrary(shouldActivate);
-}
-
-/**
- * Performs a hard refresh - completely resets and re-initializes the library
- * Useful when the DOM structure has changed significantly
- */
-function refreshHard(): void {
-  performHardRefresh();
 }
 
 // ===================================================================
