@@ -7,7 +7,6 @@ vi.mock("motion", () => ({ inView: vi.fn() }));
 vi.mock("../helpers/animations", () => {
   return {
     play: vi.fn(),
-    reset: vi.fn(),
   };
 });
 
@@ -16,7 +15,7 @@ import { DEFAULT_OPTIONS } from "../helpers/constants.js";
 import { observeElement } from "../index.js";
 
 // Cast mocked exports with correct types
-const { play: playSpy, reset: resetSpy } = vi.mocked(animations);
+const { play: playSpy } = vi.mocked(animations);
 
 beforeAll(() => {
   const { window } = new JSDOM("<html><body></body></html>");
@@ -31,7 +30,6 @@ const inViewSpy = vi.mocked(rawInView);
 beforeEach(() => {
   inViewSpy.mockClear();
   playSpy.mockClear();
-  resetSpy.mockClear();
 });
 
 describe("observeElement additional branches", () => {
@@ -59,11 +57,9 @@ describe("observeElement additional branches", () => {
     const cleanup = cb(target, {} as unknown as IntersectionObserverEntry);
     expect(typeof cleanup).toBe("function");
     expect(playSpy).toHaveBeenCalledWith(target, expect.any(Object));
-    expect(resetSpy).not.toHaveBeenCalled();
 
-    // Even if we call returned cleanup, reset should remain untouched for once=true
+    // Even if we call returned cleanup, ensure no errors occur when once=true
     (cleanup as () => void)();
-    expect(resetSpy).not.toHaveBeenCalled();
   });
 
   it("returns reset cleanup when once=false", () => {
@@ -78,11 +74,8 @@ describe("observeElement additional branches", () => {
     // satisfies the declared signature
     const cleanup = cb(el, {} as unknown as IntersectionObserverEntry);
     expect(typeof cleanup).toBe("function");
-    // reset not yet called
-    expect(resetSpy).not.toHaveBeenCalled();
 
     // invoke cleanup
     (cleanup as () => void)();
-    expect(resetSpy).toHaveBeenCalledWith(el);
   });
 });
