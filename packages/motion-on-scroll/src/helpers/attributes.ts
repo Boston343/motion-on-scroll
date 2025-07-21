@@ -22,6 +22,9 @@ export function resolveElementOptions(el: HTMLElement, global: PartialMosOptions
     once: el.hasAttribute(`data-${DATA_PREFIX}-once`)
       ? el.getAttribute(`data-${DATA_PREFIX}-once`) !== "false"
       : undefined,
+    mirror: el.hasAttribute(`data-${DATA_PREFIX}-mirror`)
+      ? el.getAttribute(`data-${DATA_PREFIX}-mirror`) !== "false"
+      : undefined,
     anchorPlacement: el.dataset[`${DATA_PREFIX}AnchorPlacement` as any] as any,
   };
 

@@ -34,6 +34,11 @@ let libraryConfig: MosOptions = DEFAULT_OPTIONS;
 let isLibraryActive = false;
 
 /**
+ * Tracks all elements currently being tracked for scroll animations
+ */
+let MosElements: HTMLElement[] = [];
+
+/**
  * Set of elements already being observed to prevent duplicate observations
  */
 const observedElements = new WeakSet<HTMLElement>();
@@ -72,47 +77,11 @@ export function observeElementOnce(element: HTMLElement, options: ElementOptions
  * Processes all current MOS elements in the DOM
  * Resolves their options and starts observing them
  */
-export function processAllElements(): HTMLElement[] {
-  const elements = findMosElements();
-
-  elements.forEach((element) => {
+export function processAllElements(): void {
+  MosElements.forEach((element) => {
     const elementOptions = resolveElementOptions(element, libraryConfig);
     observeElementOnce(element, elementOptions);
   });
-
-  return elements;
-}
-
-// ===================================================================
-// SCROLL SYSTEM INITIALIZATION
-// ===================================================================
-
-/**
- * Configures and starts the scroll detection system
- * This includes throttling, scroll tracking, and element preparation
- */
-export function initializeScrollSystem(): void {
-  // Configure performance settings from library config
-  updateScrollHandlerDelays(
-    libraryConfig.throttleDelay ?? DEFAULT_OPTIONS.throttleDelay,
-    libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
-  );
-
-  // Process all elements and start observing them
-  processAllElements();
-
-  // Calculate positions and set initial states for all elements
-  refreshElements();
-}
-
-/**
- * Recalculates element positions after layout changes
- * Called on window resize and orientation change
- */
-export function handleLayoutChange(): void {
-  if (isLibraryActive) {
-    refreshElements();
-  }
 }
 
 // ===================================================================
@@ -135,6 +104,16 @@ function adjustTimeUnitsOnFirstInit(config: MosOptions): void {
   // Convert default delay from ms to seconds if not explicitly set
   if (config.delay == null) {
     config.delay = DEFAULT_OPTIONS.delay / 1000;
+  }
+}
+
+/**
+ * Recalculates element positions after layout changes
+ * Called on window resize and orientation change
+ */
+export function handleLayoutChange(): void {
+  if (isLibraryActive) {
+    refreshElements();
   }
 }
 
@@ -178,7 +157,6 @@ export function setupStartEventListener(): void {
   if (libraryConfig.disableMutationObserver || typeof MutationObserver === "undefined") {
     return;
   }
-  startDomObserver();
 }
 
 // ===================================================================
@@ -200,48 +178,69 @@ function init(options: PartialMosOptions = {}): HTMLElement[] {
 
   // If already initialized, just refresh with new options
   if (isLibraryActive) {
-    return processAllElements();
+    refresh();
+    return MosElements;
   }
+
+  // otherwise it is first time init - gather elements
+  MosElements = findMosElements();
 
   // Handle global disable - clean up and exit early
   if (isDisabled(libraryConfig.disable ?? false)) {
-    findMosElements().forEach(removeMosAttributes);
+    MosElements.forEach(removeMosAttributes);
     return [];
   }
 
   // Set up event listeners
   setupStartEventListener();
   setupLayoutChangeListeners();
+  startDomObserver();
 
-  // Return current elements for compatibility
-  return findMosElements();
+  // Return current elements
+  return MosElements;
 }
 
 /**
- * Refreshes the library state and re-processes all elements
- * @param shouldActivate - Whether this refresh should activate the library
+ * Refreshes the library by updating element positions and re-initializing scroll system
+ * Does NOT re-find elements - only updates existing tracked elements
+ * @param shouldActivate - Whether this refresh should activate the library (if not already active)
  */
 function refresh(shouldActivate = false): void {
   if (shouldActivate) isLibraryActive = true;
-  if (isLibraryActive) initializeScrollSystem();
+  if (isLibraryActive) {
+    // Configure performance settings from library config
+    updateScrollHandlerDelays(
+      libraryConfig.throttleDelay ?? DEFAULT_OPTIONS.throttleDelay,
+      libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
+    );
+
+    // Process all elements and start observing them
+    processAllElements();
+
+    // Calculate positions and set initial states for all elements
+    refreshElements();
+  }
 }
 
 /**
- * Performs a hard refresh - completely resets and re-initializes the library
- * Useful when the DOM structure has changed significantly
+ * Performs a hard refresh - re-finds all MOS elements and completely re-initializes
+ * This is a full re-initialization that discovers new elements in the DOM
  */
 function refreshHard(): void {
+  // Re-find all MOS elements in case any were added or removed
+  MosElements = findMosElements();
+
   // Handle global disable - clean up and exit early
   if (isDisabled(libraryConfig.disable ?? false)) {
-    findMosElements().forEach(removeMosAttributes);
+    MosElements.forEach(removeMosAttributes);
     return;
   }
 
   // Clean up existing scroll handlers
   cleanupScrollHandler();
 
-  // Re-initialize everything
-  refresh(true);
+  // re-calculate positions and init scroll system
+  refresh();
 }
 
 // ===================================================================
