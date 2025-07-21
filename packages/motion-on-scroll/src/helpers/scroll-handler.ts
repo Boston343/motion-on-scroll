@@ -7,7 +7,7 @@
 
 import { play, reverse, setFinalState, setInitialState } from "./animations.js";
 import { DEFAULT_OPTIONS } from "./constants.js";
-import { getPreparedElements, recalculateElementPositions } from "./elements.js";
+import { getPreparedElements } from "./elements.js";
 import { getPositionIn, getPositionOut, isElementAboveViewport } from "./position-calculator.js";
 import type { ElementOptions, MosElement } from "./types.js";
 import { debounce, throttle } from "./utils.js";
@@ -115,20 +115,6 @@ function processScrollEvent(): void {
 // ===================================================================
 // ELEMENT PREPARATION AND POSITIONING
 // ===================================================================
-
-/**
- * Prepares all tracked elements by calculating their trigger positions
- * and setting their initial animation states
- */
-function prepareAllElements(): void {
-  getPreparedElements().forEach((elementData) => {
-    calculateElementTriggerPositions(elementData);
-    setElementInitialState(elementData);
-  });
-
-  // Process current scroll position to animate elements already in viewport
-  processScrollEvent();
-}
 
 /**
  * Calculates the scroll positions that will trigger animations for an element
@@ -288,6 +274,12 @@ export function cleanupScrollHandler(): void {
  * Called when the library needs to update after configuration changes
  */
 export function refreshElements(): void {
-  prepareAllElements();
+  getPreparedElements().forEach((elementData) => {
+    calculateElementTriggerPositions(elementData);
+    setElementInitialState(elementData);
+  });
+
+  // Process current scroll position to animate elements already in viewport
+  processScrollEvent();
   processScrollEvent();
 }

@@ -5,11 +5,9 @@
 // replacing the fragmented tracking across index.ts, scroll-handler.ts,
 // and animations.ts. Based on the AOS prepare() pattern.
 
-import type { AnimationPlaybackControls } from "motion";
-
 import { resolveElementOptions } from "./attributes.js";
-import { getPositionIn, getPositionOut, isElementAboveViewport } from "./position-calculator.js";
-import type { ElementOptions, MosElement, MosOptions } from "./types.js";
+import { getPositionIn, getPositionOut } from "./position-calculator.js";
+import type { MosElement, MosOptions } from "./types.js";
 
 // ===================================================================
 // UNIFIED ELEMENT STORAGE
@@ -17,9 +15,8 @@ import type { ElementOptions, MosElement, MosOptions } from "./types.js";
 
 /**
  * Single source of truth for all elements being tracked by MOS
- * Replaces: MosElements[], trackedElements[], elementAnimationStates WeakMap
  */
-let preparedElements: MosElement[] = [];
+let mosElements: MosElement[] = [];
 
 /**
  * Set of elements already being observed to prevent duplicate observations
@@ -35,34 +32,31 @@ const observedElements = new WeakSet<HTMLElement>();
  * Finds elements, calculates positions, sets initial states, and stores everything
  * in a unified array that replaces all previous fragmented storage
  */
-export function prepareElements(options: MosOptions): MosElement[] {
-  // Find all elements with data-mos attribute
-  const elements = Array.from(document.querySelectorAll<HTMLElement>("[data-mos]"));
-
+export function prepareElements(elements: HTMLElement[], options: MosOptions): MosElement[] {
   // Clear previous prepared elements
-  preparedElements = [];
+  mosElements = [];
 
   // Prepare each element
   elements.forEach((element) => {
     const mosElement = prepareElement(element, options);
     if (mosElement) {
-      preparedElements.push(mosElement);
+      mosElements.push(mosElement);
     }
   });
 
-  return preparedElements;
+  return mosElements;
 }
 
 /**
  * Prepares a single element for MOS tracking
  * Calculates positions, resolves options, and creates MosElement object
  */
-function prepareElement(element: HTMLElement, globalOptions: MosOptions): MosElement | null {
+function prepareElement(element: HTMLElement, options: MosOptions): MosElement | null {
   const animationName = element.getAttribute("data-mos");
   if (!animationName) return null;
 
   // Resolve element-specific options using existing attributes system
-  const elementOptions = resolveElementOptions(element, globalOptions);
+  const elementOptions = resolveElementOptions(element, options);
 
   // Calculate scroll trigger positions
   const position = {
@@ -74,13 +68,12 @@ function prepareElement(element: HTMLElement, globalOptions: MosOptions): MosEle
   };
 
   // Create unified MOS element object
-  const mosElement: MosElement & { controls?: AnimationPlaybackControls } = {
+  const mosElement: MosElement = {
     element,
     options: elementOptions,
     position,
     animated: false,
     isReversing: false,
-    // Animation controls will be added when first created
     controls: undefined,
   };
 
@@ -95,25 +88,21 @@ function prepareElement(element: HTMLElement, globalOptions: MosOptions): MosEle
  * Gets all prepared elements
  */
 export function getPreparedElements(): MosElement[] {
-  return preparedElements;
+  return mosElements;
 }
 
 /**
  * Finds a prepared element by its DOM element
  */
-export function findPreparedElement(
-  element: HTMLElement,
-): (MosElement & { controls?: AnimationPlaybackControls }) | undefined {
-  return preparedElements.find((mosEl) => mosEl.element === element) as
-    | (MosElement & { controls?: AnimationPlaybackControls })
-    | undefined;
+export function findPreparedElement(element: HTMLElement): MosElement | undefined {
+  return mosElements.find((mosEl) => mosEl.element === element);
 }
 
 /**
  * Updates the prepared elements array (for position recalculation)
  */
 export function updatePreparedElements(elements: MosElement[]): void {
-  preparedElements = elements;
+  mosElements = elements;
 }
 
 /**
@@ -134,22 +123,6 @@ export function markElementObserved(element: HTMLElement): void {
  * Clears all prepared elements and observation tracking
  */
 export function clearAllElements(): void {
-  preparedElements = [];
+  mosElements = [];
   // Note: WeakSet doesn't have a clear method, but elements will be garbage collected
-}
-
-/**
- * Recalculates positions for all prepared elements
- * Used when window is resized or orientation changes
- */
-export function recalculateElementPositions(): void {
-  preparedElements.forEach((mosElement) => {
-    mosElement.position = {
-      in: getPositionIn(mosElement.element, mosElement.options),
-      out:
-        mosElement.options.mirror && !mosElement.options.once
-          ? getPositionOut(mosElement.element, mosElement.options)
-          : false,
-    };
-  });
 }

@@ -5,7 +5,6 @@
 // It handles initialization, configuration, and lifecycle management.
 
 import { registerAnimation } from "./helpers/animations.js";
-import { resolveElementOptions } from "./helpers/attributes.js";
 import { DEFAULT_OPTIONS } from "./helpers/constants.js";
 import { registerEasing } from "./helpers/easing.js";
 import {
@@ -70,20 +69,6 @@ export function observeElementOnce(element: HTMLElement, options: ElementOptions
   // Mark as observed and start observing
   markElementObserved(element);
   startObservingElement(element, options);
-}
-
-/**
- * Processes all current MOS elements in the DOM using unified element system
- * Prepares elements with positions and options, then starts observing them
- */
-export function processAllElements(): void {
-  // Use unified element system to prepare all elements
-  const preparedElements = prepareElements(libraryConfig);
-
-  // Start observing each prepared element
-  preparedElements.forEach((mosElement) => {
-    observeElementOnce(mosElement.element, mosElement.options);
-  });
 }
 
 // ===================================================================
@@ -216,8 +201,16 @@ function refresh(shouldActivate = false): void {
       libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
     );
 
-    // Process all elements and start observing them
-    processAllElements();
+    // Find all MOS elements once and reuse them
+    const foundElements = findMosElements();
+
+    // Use unified element system to prepare elements (reusing found elements)
+    const preparedElements = prepareElements(foundElements, libraryConfig);
+
+    // Start observing each prepared element
+    preparedElements.forEach((mosElement) => {
+      observeElementOnce(mosElement.element, mosElement.options);
+    });
 
     // Calculate positions and set initial states for all elements
     refreshElements();

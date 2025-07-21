@@ -11,7 +11,7 @@ import { DEFAULT_OPTIONS } from "./constants.js";
 import { resolveEasing } from "./easing.js";
 import { findPreparedElement } from "./elements.js";
 import { getKeyframesWithDistance, resolveKeyframes } from "./keyframes.js";
-import type { AnimationFlags, ElementOptions } from "./types.js";
+import type { ElementOptions, MosElement } from "./types.js";
 
 // ===================================================================
 // TYPES AND INTERFACES
@@ -22,14 +22,6 @@ import type { AnimationFlags, ElementOptions } from "./types.js";
  * Takes an element and options, returns Motion's animation controls
  */
 export type AnimationFactory = (el: HTMLElement, opts: ElementOptions) => AnimationPlaybackControls;
-
-/**
- * Internal state tracking for each animated element
- */
-interface ElementAnimationState extends AnimationFlags {
-  /** The Motion animation controls for this element */
-  controls?: AnimationPlaybackControls;
-}
 
 // ===================================================================
 // MODULE STATE
@@ -175,7 +167,7 @@ function setupAnimationCompletionHandler(
 function handleReverseAnimationCompletion(
   element: HTMLElement,
   controls: AnimationPlaybackControls,
-  mosElement: AnimationFlags,
+  mosElement: MosElement,
 ): void {
   // Reset animation to initial state
   controls.time = 0;

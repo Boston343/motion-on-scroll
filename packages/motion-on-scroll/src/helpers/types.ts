@@ -4,18 +4,7 @@
 
 import type { EasingKeyword } from "./constants.js";
 
-/**
- * Represents an element being tracked for scroll-based animations
- * Contains all state and configuration needed for animation decisions
- */
-export interface AnimationFlags {
-  /** Whether the element has been animated */
-  animated: boolean;
-  /** Whether the element is currently reversing its animation */
-  isReversing: boolean;
-}
-
-export interface MosElement extends AnimationFlags {
+export interface MosElement {
   /** The DOM element being animated */
   element: HTMLElement;
   /** Animation configuration options */
@@ -27,6 +16,10 @@ export interface MosElement extends AnimationFlags {
     /** Scroll position where element should animate out (false if disabled) */
     out: number | false;
   };
+  /** Whether the element has been animated */
+  animated: boolean;
+  /** Whether the element is currently reversing its animation */
+  isReversing: boolean;
   /** Animation controls (added when animation is first created) */
   controls?: import("motion").AnimationPlaybackControls;
 }
