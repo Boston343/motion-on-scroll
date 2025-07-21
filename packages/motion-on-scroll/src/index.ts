@@ -10,7 +10,6 @@ import { registerEasing } from "./helpers/easing.js";
 import {
   clearAllElements,
   getMosElements,
-  invalidateElementCache,
   isElementObserved,
   markElementObserved,
   prepareElements,
@@ -129,18 +128,11 @@ export function setupStartEventListener(): void {
   ) {
     refresh(true);
     return;
-  }
-
-  // Otherwise, attach listener for the start event
-  if (startEvent === "load") {
+  } else if (startEvent === "load") {
+    // Otherwise, attach listener for the start event
     window.addEventListener(startEvent, () => refresh(true), { once: true });
   } else {
     document.addEventListener(startEvent, () => refresh(true), { once: true });
-  }
-
-  // Don't start mutation observer if disabled or not supported
-  if (libraryConfig.disableMutationObserver || typeof MutationObserver === "undefined") {
-    return;
   }
 }
 
@@ -179,7 +171,11 @@ function init(options: PartialMosOptions = {}): HTMLElement[] {
   // Set up event listeners
   setupStartEventListener();
   setupLayoutChangeListeners();
-  startDomObserver();
+
+  // Don't start mutation observer if disabled or not supported
+  if (!libraryConfig.disableMutationObserver && typeof MutationObserver !== "undefined") {
+    startDomObserver();
+  }
 
   // Return current elements
   return foundElements;
@@ -199,12 +195,6 @@ function refresh(shouldActivate = false): void {
       libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
     );
 
-    console.log("🔄 [MOS] Refreshing - recalculating positions and reprocessing elements");
-
-    // Invalidate cache since DOM might have changed
-    invalidateElementCache();
-
-    // Find all MOS elements once and reuse them
     const foundElements = getMosElements();
 
     // Use unified element system to prepare elements (reusing found elements)
@@ -226,7 +216,7 @@ function refresh(shouldActivate = false): void {
  */
 function refreshHard(): void {
   // Re-find all MOS elements in case any were added or removed
-  const foundElements = getMosElements();
+  const foundElements = getMosElements(true);
 
   // Handle global disable - clean up and exit early
   if (isDisabled(libraryConfig.disable ?? false)) {

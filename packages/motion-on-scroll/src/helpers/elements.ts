@@ -10,16 +10,12 @@ import { getPositionIn, getPositionOut } from "./position-calculator.js";
 import type { MosElement, MosOptions } from "./types.js";
 
 // ===================================================================
-// UNIFIED ELEMENT STORAGE
+// UNIFIED ELEMENT STORAGE (SINGLE SOURCE OF TRUTH)
 // ===================================================================
 
 /**
- * Cached DOM elements to avoid repeated queries
- */
-let cachedDomElements: HTMLElement[] | null = null;
-
-/**
  * Single source of truth for all elements being tracked by MOS
+ * Contains both raw elements and their prepared data (positions, options, state)
  */
 let mosElements: MosElement[] = [];
 
@@ -33,22 +29,17 @@ const observedElements = new WeakSet<HTMLElement>();
 // ===================================================================
 
 /**
- * Finds all elements with [data-mos] attribute in the DOM
- * Results are cached to avoid repeated queries until invalidated
+ * Gets all raw DOM elements, using prepared elements as cache when available
+ * If elements haven't been prepared yet or need refresh, queries DOM directly
  */
-export function getMosElements(): HTMLElement[] {
-  if (cachedDomElements === null) {
-    cachedDomElements = Array.from(document.querySelectorAll<HTMLElement>("[data-mos]"));
+export function getMosElements(findNewElements: boolean = false): HTMLElement[] {
+  // If we have prepared elements and don't need refresh, extract from them
+  if (!findNewElements && mosElements.length > 0) {
+    return mosElements.map((mosEl) => mosEl.element);
   }
-  return cachedDomElements;
-}
 
-/**
- * Invalidates the cached DOM elements, forcing a fresh query on next getMosElements call
- * Should be called when DOM structure changes (e.g., after dynamic content updates)
- */
-export function invalidateElementCache(): void {
-  cachedDomElements = null;
+  // Otherwise, query DOM directly
+  return Array.from(document.querySelectorAll<HTMLElement>("[data-mos]"));
 }
 
 // ===================================================================
@@ -148,9 +139,8 @@ export function markElementObserved(element: HTMLElement): void {
 }
 
 /**
- * Clears all prepared elements and observation tracking
+ * Clears all prepared elements
  */
 export function clearAllElements(): void {
   mosElements = [];
-  // Note: WeakSet doesn't have a clear method, but elements will be garbage collected
 }
