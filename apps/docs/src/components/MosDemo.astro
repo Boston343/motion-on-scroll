@@ -44,87 +44,91 @@ const animationSections = [
 ];
 ---
 
-<div class="not-content mx-auto max-w-4xl overflow-clip p-8">
-  <div class="space-y-24">
-    {
-      animationSections.map((section) => {
-        let itemIndex = 0;
-        return (
-          <div class="space-y-8">
-            <h2 class="text-center text-3xl font-semibold text-gray-800 md:col-span-2 dark:text-gray-200">
-              {section.title}
-            </h2>
+<div class="w-full">
+  <div class="not-content mx-auto max-w-4xl p-8">
+    <div class="space-y-24">
+      {
+        animationSections.map((section) => {
+          let itemIndex = 0;
+          return (
+            <div class="space-y-8">
+              <h2 class="text-center text-3xl font-semibold text-gray-800 md:col-span-2 dark:text-gray-200">
+                {section.title}
+              </h2>
 
-            <div class="space-y-20">
-              {section.animations.map((animation) => {
-                const isLeft = itemIndex % 2 === 0;
-                itemIndex++;
-                return (
-                  <div
-                    class={`flex ${
-                      isLeft ? "justify-start md:justify-start" : "justify-end md:justify-end"
-                    }`}
-                  >
+              <div class="space-y-20">
+                {section.animations.map((animation) => {
+                  const isLeft = itemIndex % 2 === 0;
+                  itemIndex++;
+                  return (
                     <div
-                      class={`bg-gradient-to-br ${section.colorClasses} min-w-[200px] rounded-xl px-8 py-10 text-center font-semibold text-white shadow-xl`}
-                      data-mos={animation}
+                      class={`flex ${
+                        isLeft ? "justify-start md:justify-start" : "justify-end md:justify-end"
+                      }`}
                     >
-                      {animation}
+                      <div
+                        class={`bg-gradient-to-br ${section.colorClasses} min-w-[200px] rounded-xl px-8 py-10 text-center font-semibold text-white shadow-xl`}
+                        data-mos={animation}
+                      >
+                        {animation}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })
+      }
+
+      <!-- Custom Animations Demo -->
+      <div class="space-y-8">
+        <h2
+          class="text-center text-3xl font-semibold text-gray-800 md:col-span-2 dark:text-gray-200"
+        >
+          Custom Animations
+        </h2>
+
+        <div class="space-y-20">
+          <!-- Custom Keyframes Example -->
+          <div class="flex justify-start md:justify-start">
+            <div
+              class="min-w-[200px] rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-yellow-400 dark:to-orange-500"
+              data-mos="my-custom-keyframes"
+            >
+              my-custom-keyframes
             </div>
           </div>
-        );
-      })
-    }
 
-    <!-- Custom Animations Demo -->
-    <div class="space-y-8">
-      <h2 class="text-center text-3xl font-semibold text-gray-800 md:col-span-2 dark:text-gray-200">
-        Custom Animations
-      </h2>
-
-      <div class="space-y-20">
-        <!-- Custom Keyframes Example -->
-        <div class="flex justify-start md:justify-start">
-          <div
-            class="min-w-[200px] rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-yellow-400 dark:to-orange-500"
-            data-mos="my-custom-keyframes"
-          >
-            my-custom-keyframes
+          <!-- Custom Animation Example -->
+          <div class="flex justify-end md:justify-end">
+            <div
+              class="min-w-[200px] rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-rose-400 dark:to-pink-500"
+              data-mos="bouncy"
+            >
+              bouncy animation
+            </div>
           </div>
-        </div>
 
-        <!-- Custom Animation Example -->
-        <div class="flex justify-end md:justify-end">
-          <div
-            class="min-w-[200px] rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-rose-400 dark:to-pink-500"
-            data-mos="bouncy"
-          >
-            bouncy animation
+          <!-- Custom Easing Examples -->
+          <div class="flex justify-start md:justify-start">
+            <div
+              class="min-w-[200px] rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-teal-400 dark:to-cyan-500"
+              data-mos="fade-up"
+              data-mos-easing="bouncy"
+            >
+              fade-up w/ bouncy easing
+            </div>
           </div>
-        </div>
 
-        <!-- Custom Easing Examples -->
-        <div class="flex justify-start md:justify-start">
-          <div
-            class="min-w-[200px] rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-teal-400 dark:to-cyan-500"
-            data-mos="fade-up"
-            data-mos-easing="bouncy"
-          >
-            fade-up w/ bouncy easing
-          </div>
-        </div>
-
-        <div class="flex justify-end md:justify-end">
-          <div
-            class="min-w-[200px] rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-violet-400 dark:to-purple-500"
-            data-mos="fade-up"
-            data-mos-easing="dramatic"
-          >
-            fade-up w/ dramatic easing
+          <div class="flex justify-end md:justify-end">
+            <div
+              class="min-w-[200px] rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-violet-400 dark:to-purple-500"
+              data-mos="fade-up"
+              data-mos-easing="dramatic"
+            >
+              fade-up w/ dramatic easing
+            </div>
           </div>
         </div>
       </div>
@@ -165,9 +169,15 @@ const animationSections = [
     duration: 800,
     offset: 50,
     once: false,
-    mirror: false,
+    mirror: true,
   });
 </script>
+
+<style is:global>
+  .main-pane {
+    overflow: clip;
+  }
+</style>
 
 <style>
   /* MOS default visibility helpers – prevents initial flash of un-animated elements */
