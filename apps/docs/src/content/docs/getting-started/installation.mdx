@@ -8,33 +8,29 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Install
 
-<Aside>
-  This is currently in beta, so expect a few rough edges. You can install the most recent version with `npm install motion-on-scroll@beta`.
-</Aside>
-
 <Tabs syncKey="pm">
   <TabItem label="npm">
 
 ```bash
-npm install motion-on-scroll@beta
+npm install motion-on-scroll
 ```
   </TabItem>
   <TabItem label="pnpm">
 
 ```bash
-pnpm add motion-on-scroll@beta
+pnpm add motion-on-scroll
 ```
   </TabItem>
   <TabItem label="yarn">
 
 ```bash
-yarn add motion-on-scroll@beta
+yarn add motion-on-scroll
 ```
   </TabItem>
 </Tabs>
 
 <Aside>
-  Motion-On-Scroll (MOS) depends only on the <a target="_blank" rel="noopener noreferrer" href="https://motion.dev/">motion</a> package for its `inView` and `animate` helpers.
+  Motion-On-Scroll (MOS) depends only on the <a target="_blank" rel="noopener noreferrer" href="https://motion.dev/">motion</a> package for its `animate` helpers.
 </Aside>
 
 ## Minimal bootstrapping
@@ -112,15 +108,12 @@ MOS ships with a small stylesheet that ensures elements are hidden upon initial 
 /* slide presets */
 [data-mos^="slide"] {
   will-change: transform;
-  visibility: hidden;
-}
-[data-mos^="slide"].mos-animate {
-  visibility: visible;
 }
 
 /* flip presets */
 [data-mos^="flip"] {
   will-change: transform;
+  transform: rotateY(-180deg);
   backface-visibility: hidden;
 }
 ```
