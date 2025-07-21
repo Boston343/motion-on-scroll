@@ -9,6 +9,8 @@ import { DEFAULT_OPTIONS } from "./helpers/constants.js";
 import { registerEasing } from "./helpers/easing.js";
 import {
   clearAllElements,
+  getMosElements,
+  invalidateElementCache,
   isElementObserved,
   markElementObserved,
   prepareElements,
@@ -49,10 +51,6 @@ let isLibraryActive = false;
  * Finds all elements in the DOM that have the data-mos attribute
  * @returns Array of HTMLElements with data-mos attributes
  */
-function findMosElements(): HTMLElement[] {
-  return Array.from(document.querySelectorAll<HTMLElement>("[data-mos]"));
-}
-
 /**
  * Starts observing an element for scroll-based animations
  * Prevents duplicate observations using the observedElements set
@@ -166,11 +164,11 @@ function init(options: PartialMosOptions = {}): HTMLElement[] {
   // If already initialized, just refresh with new options
   if (isLibraryActive) {
     refresh();
-    return findMosElements(); // Return current DOM elements
+    return getMosElements(); // Return current DOM elements
   }
 
   // First time init - find elements and check for global disable
-  const foundElements = findMosElements();
+  const foundElements = getMosElements();
 
   // Handle global disable - clean up and exit early
   if (isDisabled(libraryConfig.disable ?? false)) {
@@ -201,8 +199,13 @@ function refresh(shouldActivate = false): void {
       libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
     );
 
+    console.log("🔄 [MOS] Refreshing - recalculating positions and reprocessing elements");
+
+    // Invalidate cache since DOM might have changed
+    invalidateElementCache();
+
     // Find all MOS elements once and reuse them
-    const foundElements = findMosElements();
+    const foundElements = getMosElements();
 
     // Use unified element system to prepare elements (reusing found elements)
     const preparedElements = prepareElements(foundElements, libraryConfig);
@@ -223,7 +226,7 @@ function refresh(shouldActivate = false): void {
  */
 function refreshHard(): void {
   // Re-find all MOS elements in case any were added or removed
-  const foundElements = findMosElements();
+  const foundElements = getMosElements();
 
   // Handle global disable - clean up and exit early
   if (isDisabled(libraryConfig.disable ?? false)) {

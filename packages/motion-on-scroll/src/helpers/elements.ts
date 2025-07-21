@@ -23,6 +23,34 @@ let mosElements: MosElement[] = [];
  */
 const observedElements = new WeakSet<HTMLElement>();
 
+/**
+ * Cached DOM elements to avoid repeated queries
+ */
+let cachedDomElements: HTMLElement[] | null = null;
+
+// ===================================================================
+// DOM ELEMENT DISCOVERY
+// ===================================================================
+
+/**
+ * Finds all elements with [data-mos] attribute in the DOM
+ * Results are cached to avoid repeated queries until invalidated
+ */
+export function getMosElements(): HTMLElement[] {
+  if (cachedDomElements === null) {
+    cachedDomElements = Array.from(document.querySelectorAll<HTMLElement>("[data-mos]"));
+  }
+  return cachedDomElements;
+}
+
+/**
+ * Invalidates the cached DOM elements, forcing a fresh query on next getMosElements call
+ * Should be called when DOM structure changes (e.g., after dynamic content updates)
+ */
+export function invalidateElementCache(): void {
+  cachedDomElements = null;
+}
+
 // ===================================================================
 // ELEMENT PREPARATION (AOS-STYLE)
 // ===================================================================
