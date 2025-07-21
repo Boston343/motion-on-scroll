@@ -27,6 +27,8 @@ export interface MosElement extends AnimationFlags {
     /** Scroll position where element should animate out (false if disabled) */
     out: number | false;
   };
+  /** Animation controls (added when animation is first created) */
+  controls?: import("motion").AnimationPlaybackControls;
 }
 
 export type DeviceDisable = boolean | "mobile" | "phone" | "tablet" | (() => boolean);

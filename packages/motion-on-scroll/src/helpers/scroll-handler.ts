@@ -7,6 +7,7 @@
 
 import { play, reverse, setFinalState, setInitialState } from "./animations.js";
 import { DEFAULT_OPTIONS } from "./constants.js";
+import { getPreparedElements, recalculateElementPositions } from "./elements.js";
 import { getPositionIn, getPositionOut, isElementAboveViewport } from "./position-calculator.js";
 import type { ElementOptions, MosElement } from "./types.js";
 import { debounce, throttle } from "./utils.js";
@@ -14,11 +15,6 @@ import { debounce, throttle } from "./utils.js";
 // ===================================================================
 // MODULE STATE
 // ===================================================================
-
-/**
- * Array of all elements currently being tracked for scroll animations
- */
-let trackedElements: MosElement[] = [];
 
 /**
  * Reference to the active scroll event handler (for cleanup)
@@ -110,8 +106,8 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
 function processScrollEvent(): void {
   const currentScrollY = window.scrollY;
 
-  // Update animation state for all tracked elements
-  trackedElements.forEach((elementData) => {
+  // Update animation state for all prepared elements
+  getPreparedElements().forEach((elementData) => {
     updateElementAnimationState(elementData, currentScrollY);
   });
 }
@@ -125,7 +121,7 @@ function processScrollEvent(): void {
  * and setting their initial animation states
  */
 function prepareAllElements(): void {
-  trackedElements.forEach((elementData) => {
+  getPreparedElements().forEach((elementData) => {
     calculateElementTriggerPositions(elementData);
     setElementInitialState(elementData);
   });
@@ -175,7 +171,10 @@ function setElementInitialState(elementData: MosElement): void {
  * Called on window resize and orientation change events
  */
 function recalculateAllPositions(): void {
-  trackedElements.forEach((elementData) => {
+  // Use the unified element system's recalculation function
+  // This will be called with the global options from the main module
+  // For now, we'll update positions manually and then process scroll
+  getPreparedElements().forEach((elementData) => {
     calculateElementTriggerPositions(elementData);
   });
 
@@ -215,55 +214,9 @@ export function observeElement(element: HTMLElement, options: ElementOptions): v
     options.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
   );
 
-  // Check if element is already being tracked
-  const existingElementIndex = findTrackedElementIndex(element);
-
-  if (existingElementIndex !== -1) {
-    // Update existing element's options
-    const existingElement = trackedElements[existingElementIndex]!;
-    existingElement.options = options;
-  } else {
-    // Add new element to tracking
-    addElementToTracking(element, options);
-  }
-
-  // Ensure scroll handler is active
+  // Elements are now managed by the unified elements.ts system
+  // This function just ensures the scroll handler is active
   ensureScrollHandlerActive();
-}
-
-/**
- * Finds the index of an element in the tracked elements array
- * @param element - The element to find
- * @returns Index of the element, or -1 if not found
- */
-function findTrackedElementIndex(element: HTMLElement): number {
-  return trackedElements.findIndex((elementData) => elementData.element === element);
-}
-
-/**
- * Adds a new element to the tracking array with default state
- * @param element - The DOM element to add
- * @param options - Animation configuration for this element
- */
-function addElementToTracking(element: HTMLElement, options: ElementOptions): void {
-  trackedElements.push({
-    element,
-    options,
-    position: { in: 0, out: false }, // Will be calculated later
-    animated: false,
-    isReversing: false,
-  });
-}
-
-/**
- * Removes an element from scroll-based animation tracking
- * @param element - The DOM element to stop observing
- */
-export function unobserveElement(element: HTMLElement): void {
-  const elementIndex = findTrackedElementIndex(element);
-  if (elementIndex !== -1) {
-    trackedElements.splice(elementIndex, 1);
-  }
 }
 
 // ===================================================================
@@ -324,9 +277,6 @@ export function cleanupScrollHandler(): void {
     activeScrollHandler = null;
     activeResizeHandler = null;
   }
-
-  // Clear all tracked elements
-  trackedElements = [];
 }
 
 // ===================================================================

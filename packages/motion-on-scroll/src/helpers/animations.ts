@@ -9,6 +9,7 @@ import { animate, type AnimationPlaybackControls, type KeyframeOptions } from "m
 
 import { DEFAULT_OPTIONS } from "./constants.js";
 import { resolveEasing } from "./easing.js";
+import { findPreparedElement } from "./elements.js";
 import { getKeyframesWithDistance, resolveKeyframes } from "./keyframes.js";
 import type { AnimationFlags, ElementOptions } from "./types.js";
 
@@ -39,12 +40,6 @@ interface ElementAnimationState extends AnimationFlags {
  * Used to track which elements are actively animating
  */
 const activeAnimations = new WeakMap<HTMLElement, AnimationPlaybackControls>();
-
-/**
- * Maps elements to their animation state and controls
- * Stores persistent state across animation cycles
- */
-const elementAnimationStates = new WeakMap<HTMLElement, ElementAnimationState>();
 
 /**
  * Registry of custom animations registered by users
@@ -95,23 +90,20 @@ function ensureAnimationControls(
   element: HTMLElement,
   options: ElementOptions,
 ): AnimationPlaybackControls | null {
-  const existingState = elementAnimationStates.get(element);
+  const mosElement = findPreparedElement(element);
+  if (!mosElement) return null;
 
   // Return existing controls if available
-  if (existingState?.controls) {
-    return existingState.controls;
+  if (mosElement.controls) {
+    return mosElement.controls;
   }
 
   // Create new animation controls
   const controls = createAnimationControls(element, options);
   if (!controls) return null;
 
-  // Store state with new controls
-  elementAnimationStates.set(element, {
-    animated: false,
-    isReversing: false,
-    controls,
-  });
+  // Store controls in unified element
+  mosElement.controls = controls;
 
   return controls;
 }
@@ -135,14 +127,16 @@ export function setInitialState(element: HTMLElement, options: ElementOptions): 
   const controls = ensureAnimationControls(element, options);
   if (!controls) return;
 
+  const mosElement = findPreparedElement(element);
+  if (!mosElement) return;
+
   // Pause controls without setting time to preserve natural element position
   // This is crucial for accurate scroll position calculations
   controls.pause();
 
   // Update element state
-  const state = elementAnimationStates.get(element)!;
-  state.animated = false;
-  state.isReversing = false;
+  mosElement.animated = false;
+  mosElement.isReversing = false;
 }
 
 /**
@@ -160,11 +154,11 @@ function setupAnimationCompletionHandler(
 ): void {
   controls.finished
     .then(() => {
-      const state = elementAnimationStates.get(element);
-      if (!state) return;
+      const mosElement = findPreparedElement(element);
+      if (!mosElement) return;
 
-      if (state.isReversing) {
-        handleReverseAnimationCompletion(element, controls, state);
+      if (mosElement.isReversing) {
+        handleReverseAnimationCompletion(element, controls, mosElement);
       } else {
         handleForwardAnimationCompletion(element, controls, options);
       }
@@ -181,7 +175,7 @@ function setupAnimationCompletionHandler(
 function handleReverseAnimationCompletion(
   element: HTMLElement,
   controls: AnimationPlaybackControls,
-  state: ElementAnimationState,
+  mosElement: AnimationFlags,
 ): void {
   // Reset animation to initial state
   controls.time = 0;
@@ -190,14 +184,14 @@ function handleReverseAnimationCompletion(
   element.classList.remove("mos-animate");
 
   // Update state
-  state.isReversing = false;
-  state.animated = false;
+  mosElement.isReversing = false;
+  mosElement.animated = false;
 
   // Call reverse completion callback if stored
-  const reverseCallback = (state as any).reverseCallback;
+  const reverseCallback = (mosElement as any).reverseCallback;
   if (reverseCallback) {
     reverseCallback();
-    delete (state as any).reverseCallback;
+    delete (mosElement as any).reverseCallback;
   }
 }
 
@@ -224,10 +218,10 @@ function handleForwardAnimationCompletion(
  * Cleans up state to prevent memory leaks
  */
 function handleAnimationInterruption(element: HTMLElement): void {
-  const state = elementAnimationStates.get(element);
-  if (state) {
-    state.isReversing = false;
-    delete (state as any).reverseCallback;
+  const mosElement = findPreparedElement(element);
+  if (mosElement) {
+    mosElement.isReversing = false;
+    delete (mosElement as any).reverseCallback;
   }
 }
 
@@ -361,9 +355,11 @@ export function setFinalState(element: HTMLElement, options: ElementOptions): vo
   element.classList.add("mos-animate");
 
   // Update element state
-  const state = elementAnimationStates.get(element)!;
-  state.animated = true;
-  state.isReversing = false;
+  const mosElement = findPreparedElement(element);
+  if (mosElement) {
+    mosElement.animated = true;
+    mosElement.isReversing = false;
+  }
 }
 
 // ===================================================================
@@ -382,19 +378,21 @@ export function play(element: HTMLElement, options: ElementOptions): void {
   const controls = ensureAnimationControls(element, options);
   if (!controls) return;
 
+  const mosElement = findPreparedElement(element);
+  if (!mosElement) return;
+
   const existingAnimation = activeAnimations.get(element);
-  const state = elementAnimationStates.get(element);
 
   // Don't interrupt if already animating forward
-  if (!state || (existingAnimation && !state.isReversing)) return;
+  if (existingAnimation && !mosElement.isReversing) return;
 
   // Configure for forward playback
   controls.speed = 1;
   controls.play();
 
   // Update state
-  state.animated = true;
-  state.isReversing = false;
+  mosElement.animated = true;
+  mosElement.isReversing = false;
 
   // Add CSS class for styling and mark as actively animating
   element.classList.add("mos-animate");
@@ -409,19 +407,19 @@ export function play(element: HTMLElement, options: ElementOptions): void {
  * @param onComplete - Optional callback to call when reverse completes
  */
 export function reverse(element: HTMLElement, onComplete?: () => void): void {
-  const state = elementAnimationStates.get(element);
-  if (!state?.controls) return;
+  const mosElement = findPreparedElement(element);
+  if (!mosElement?.controls) return;
 
-  const controls = state.controls;
+  const controls = mosElement.controls;
 
   // Configure for reverse playback
-  state.isReversing = true;
+  mosElement.isReversing = true;
   controls.speed = -1;
   controls.play();
 
   // Store completion callback for later execution
   if (onComplete) {
-    (state as any).reverseCallback = onComplete;
+    (mosElement as any).reverseCallback = onComplete;
   }
 
   // Mark as actively animating

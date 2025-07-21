@@ -8,6 +8,12 @@ import { registerAnimation } from "./helpers/animations.js";
 import { resolveElementOptions } from "./helpers/attributes.js";
 import { DEFAULT_OPTIONS } from "./helpers/constants.js";
 import { registerEasing } from "./helpers/easing.js";
+import {
+  clearAllElements,
+  isElementObserved,
+  markElementObserved,
+  prepareElements,
+} from "./helpers/elements.js";
 import { registerKeyframes } from "./helpers/keyframes.js";
 import { startDomObserver } from "./helpers/observer.js";
 import {
@@ -33,15 +39,8 @@ let libraryConfig: MosOptions = DEFAULT_OPTIONS;
  */
 let isLibraryActive = false;
 
-/**
- * Tracks all elements currently being tracked for scroll animations
- */
-let MosElements: HTMLElement[] = [];
-
-/**
- * Set of elements already being observed to prevent duplicate observations
- */
-const observedElements = new WeakSet<HTMLElement>();
+// Element tracking is now handled by the unified elements.ts system
+// observedElements tracking is also handled there
 
 // ===================================================================
 // ELEMENT DISCOVERY AND MANAGEMENT
@@ -63,24 +62,27 @@ function findMosElements(): HTMLElement[] {
  */
 export function observeElementOnce(element: HTMLElement, options: ElementOptions): void {
   // Skip if already observing this element
-  if (observedElements.has(element)) return;
+  if (isElementObserved(element)) return;
 
   // Skip if animations are disabled for this element
   if (isDisabled(options.disable)) return;
 
   // Mark as observed and start observing
-  observedElements.add(element);
+  markElementObserved(element);
   startObservingElement(element, options);
 }
 
 /**
- * Processes all current MOS elements in the DOM
- * Resolves their options and starts observing them
+ * Processes all current MOS elements in the DOM using unified element system
+ * Prepares elements with positions and options, then starts observing them
  */
 export function processAllElements(): void {
-  MosElements.forEach((element) => {
-    const elementOptions = resolveElementOptions(element, libraryConfig);
-    observeElementOnce(element, elementOptions);
+  // Use unified element system to prepare all elements
+  const preparedElements = prepareElements(libraryConfig);
+
+  // Start observing each prepared element
+  preparedElements.forEach((mosElement) => {
+    observeElementOnce(mosElement.element, mosElement.options);
   });
 }
 
@@ -179,15 +181,15 @@ function init(options: PartialMosOptions = {}): HTMLElement[] {
   // If already initialized, just refresh with new options
   if (isLibraryActive) {
     refresh();
-    return MosElements;
+    return findMosElements(); // Return current DOM elements
   }
 
-  // otherwise it is first time init - gather elements
-  MosElements = findMosElements();
+  // First time init - find elements and check for global disable
+  const foundElements = findMosElements();
 
   // Handle global disable - clean up and exit early
   if (isDisabled(libraryConfig.disable ?? false)) {
-    MosElements.forEach(removeMosAttributes);
+    foundElements.forEach(removeMosAttributes);
     return [];
   }
 
@@ -197,7 +199,7 @@ function init(options: PartialMosOptions = {}): HTMLElement[] {
   startDomObserver();
 
   // Return current elements
-  return MosElements;
+  return foundElements;
 }
 
 /**
@@ -228,15 +230,16 @@ function refresh(shouldActivate = false): void {
  */
 function refreshHard(): void {
   // Re-find all MOS elements in case any were added or removed
-  MosElements = findMosElements();
+  const foundElements = findMosElements();
 
   // Handle global disable - clean up and exit early
   if (isDisabled(libraryConfig.disable ?? false)) {
-    MosElements.forEach(removeMosAttributes);
+    foundElements.forEach(removeMosAttributes);
     return;
   }
 
-  // Clean up existing scroll handlers
+  // Clear existing prepared elements and clean up scroll handlers
+  clearAllElements();
   cleanupScrollHandler();
 
   // re-calculate positions and init scroll system
