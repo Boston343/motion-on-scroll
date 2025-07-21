@@ -14,6 +14,11 @@ import type { MosElement, MosOptions } from "./types.js";
 // ===================================================================
 
 /**
+ * Cached DOM elements to avoid repeated queries
+ */
+let cachedDomElements: HTMLElement[] | null = null;
+
+/**
  * Single source of truth for all elements being tracked by MOS
  */
 let mosElements: MosElement[] = [];
@@ -22,11 +27,6 @@ let mosElements: MosElement[] = [];
  * Set of elements already being observed to prevent duplicate observations
  */
 const observedElements = new WeakSet<HTMLElement>();
-
-/**
- * Cached DOM elements to avoid repeated queries
- */
-let cachedDomElements: HTMLElement[] | null = null;
 
 // ===================================================================
 // DOM ELEMENT DISCOVERY
@@ -58,7 +58,7 @@ export function invalidateElementCache(): void {
 /**
  * Prepares all MOS elements for animation tracking (AOS-style prepare function)
  * Finds elements, calculates positions, sets initial states, and stores everything
- * in a unified array that replaces all previous fragmented storage
+ * in a unified array
  */
 export function prepareElements(elements: HTMLElement[], options: MosOptions): MosElement[] {
   // Clear previous prepared elements
