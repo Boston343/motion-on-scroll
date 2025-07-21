@@ -246,3 +246,5 @@ export const MOS = {
 };
 
 export { init, refresh, refreshHard, registerAnimation, registerEasing, registerKeyframes };
+
+export default MOS;
