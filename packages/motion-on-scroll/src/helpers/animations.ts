@@ -26,10 +26,6 @@ export type AnimationFactory = (el: HTMLElement, opts: ElementOptions) => Animat
  * Internal state tracking for each animated element
  */
 interface ElementAnimationState extends AnimationFlags {
-  /** Whether the element has been animated at least once */
-  animated: boolean;
-  /** Whether the element is currently playing a reverse animation */
-  isReversing: boolean;
   /** The Motion animation controls for this element */
   controls?: AnimationPlaybackControls;
 }
