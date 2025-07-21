@@ -72,9 +72,12 @@ importers:
       astro:
         specifier: ^5.6.1
         version: 5.12.0(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(rollup@4.45.1)(typescript@5.8.3)
+      motion:
+        specifier: ^12.23.6
+        version: 12.23.6
       motion-on-scroll:
-        specifier: ^0.0.3
-        version: 0.0.3
+        specifier: ^0.0.4
+        version: link:../../packages/motion-on-scroll
       sharp:
         specifier: ^0.34.2
         version: 0.34.3
@@ -2828,10 +2831,6 @@ packages:
 
   motion-dom@12.23.6:
     resolution: {integrity: sha512-G2w6Nw7ZOVSzcQmsdLc0doMe64O/Sbuc2bVAbgMz6oP/6/pRStKRiVRV4bQfHp5AHYAKEGhEdVHTM+R3FDgi5w==}
-
-  motion-on-scroll@0.0.3:
-    resolution: {integrity: sha512-KK42cVFzIP550m0R+U0UqW+zc3I5MXop1QDAPkn6EOHPftA3HJ8Fc3y5Cg2rK6X64bP3FA2qrdONw+/+1zy6uQ==}
-    engines: {node: ^20.6.0 || >=22.0.0}
 
   motion-utils@12.23.6:
     resolution: {integrity: sha512-eAWoPgr4eFEOFfg2WjIsMoqJTW6Z8MTUCgn/GZ3VRpClWBdnbjryiA3ZSNLyxCTmCQx4RmYX6jX1iWHbenUPNQ==}
@@ -7563,14 +7562,6 @@ snapshots:
   motion-dom@12.23.6:
     dependencies:
       motion-utils: 12.23.6
-
-  motion-on-scroll@0.0.3:
-    dependencies:
-      motion: 12.23.6
-    transitivePeerDependencies:
-      - '@emotion/is-prop-valid'
-      - react
-      - react-dom
 
   motion-utils@12.23.6: {}
 
