@@ -9,7 +9,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 `init(options?)`
 
-Initialises observers for every element possessing `data-mos`. Call this once on page load. It’s idempotent—calling it again merges new defaults and refreshes observation.
+Initialises observers for every element possessing `data-mos`. Call this once on page load after [registering any additional](#register-custom-presets) presets desired.
 
 ```ts
 import { MOS } from 'motion-on-scroll';
@@ -83,6 +83,13 @@ Need something else? Define a custom easing preset with [`MOS.registerEasing`](#
 
 Play only once, then unobserve the element.
 
+#### mirror
+
+*Type*: `boolean`  
+*Default*: `false`
+
+If true, elements animate when scrolling up as well as down (requires once: false).
+
 #### disable
 
 *Type*: `boolean | 'mobile' | 'phone' | 'tablet' | (() => boolean)`  
@@ -97,14 +104,34 @@ Disable animations entirely under specific conditions (e.g. on mobile).
 
 Skip the automatic `MutationObserver` (useful when you manage DOM changes manually). 
 
-<Aside>
-  <strong>Hybrid engine.</strong> Motion automatically chooses the most performant path:
-  it runs animations with the browser-native <em>Web Animations API</em> whenever the animated value is supported, and falls back to JavaScript (`requestAnimationFrame`) when it isn’t. Either way, MOS abstracts this detail—you use the same API.
-</Aside>
+#### startEvent
+
+*Type*: `string`  
+*Default*: `"DOMContentLoaded"`
+
+DOM event that triggers MOS to start. Defaults to "DOMContentLoaded".
+
+#### throttleDelay
+
+*Type*: `number`  
+*Default*: `99`
+
+Throttle delay for scroll events in ms.
+
+#### debounceDelay
+
+*Type*: `number`  
+*Default*: `50`
+
+Debounce delay for resize/orientation events in ms.
+
+## refresh()
+
+Update all element positions and re-initialize the scroll system.
 
 ## refreshHard()
 
-Re-evaluates the DOM for all `data-mos` elements and re-attaches observers using the last supplied global options. Useful after client-side navigation or significant DOM changes. This is internally called automatically when DOM changes are detected, unless you disable the mutation observer.
+Re-evaluates the DOM for all `[data-mos]` elements and calls `refresh()`. Useful after client-side navigation or significant DOM changes. This is internally called automatically when DOM changes are detected, unless you disable the mutation observer.
 
 ## Register Custom Presets
 

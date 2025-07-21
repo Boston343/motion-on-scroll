@@ -94,14 +94,13 @@ yarn add motion-on-scroll
 | `easing`   | `easing`   | `'ease'`|
 | `once`     | `once`     | `false` |
 | `disable`  | `disable`  | `false` |
+| `mirror`   | `mirror`   | `false` |
+| `throttleDelay` | `throttleDelay` | `99`    |
+| `debounceDelay` | `debounceDelay` | `50`    |
+| `startEvent` | `startEvent` | `'DOMContentLoaded'` |
+| `disableMutationObserver` | `disableMutationObserver` | `false` |
 
-## 5. Script removal
-
-In AOS, you needed to call `AOS.refresh` in order to recalculate element positions whenever you dynamically loaded data, or it was auto automatically called on window resize. Because MOS uses motion's `inView` function which leverages the browser's native Intersection Observer API, it doesn't need this. This means you can remove any `AOS.refresh()` calls all-together.
-
-If you dynamically load MOS in SPA routers and disable the mutation observer, replace any `AOS.refreshHard()` calls with `MOS.refreshHard()`.
-
-## 6. Verify animation presets
+## 5. Verify animation presets
 
 MOS ships all of the AOS presets. Any custom animations can be replicated by [registering custom presets](/reference/api/#register-custom-presets). 
 
