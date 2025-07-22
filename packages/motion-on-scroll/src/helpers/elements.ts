@@ -70,7 +70,7 @@ export function prepareElements(elements: HTMLElement[], options: MosOptions): M
  * Prepares a single element for MOS tracking
  * Calculates positions, resolves options, and creates MosElement object
  */
-function prepareElement(element: HTMLElement, options: MosOptions): MosElement | null {
+export function prepareElement(element: HTMLElement, options: MosOptions): MosElement | null {
   const animationName = element.getAttribute("data-mos");
   if (!animationName) return null;
 

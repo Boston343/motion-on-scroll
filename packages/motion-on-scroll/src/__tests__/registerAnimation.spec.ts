@@ -21,6 +21,7 @@ import * as motion from "motion";
 
 import { play, registerAnimation } from "../helpers/animations.js";
 import { DEFAULT_OPTIONS } from "../helpers/constants.js";
+import { prepareElement, updatePreparedElements } from "../helpers/elements.js";
 import type { ElementOptions } from "../helpers/types.js";
 
 // Establish a DOM for motion and our utilities to interact with
@@ -48,6 +49,9 @@ describe("registerAnimation", () => {
 
   beforeEach(() => {
     div = document.createElement("div");
+    // Add required data-mos attribute for element preparation
+    div.setAttribute("data-mos", "fade");
+    document.body.appendChild(div);
     vi.clearAllMocks();
   });
 
@@ -57,7 +61,13 @@ describe("registerAnimation", () => {
 
     registerAnimation(NAME, (el) => motion.animate(el, KEYFRAMES, { duration: 0.5 }));
 
-    play(div, makeOpts({ keyframes: NAME }));
+    // Prepare the element before calling play
+    const options = makeOpts({ keyframes: NAME });
+    const mosElement = prepareElement(div, options);
+    if (mosElement) {
+      updatePreparedElements([mosElement]);
+    }
+    play(div, options);
 
     expect(animateSpy).toHaveBeenCalledTimes(1);
     const [elArg, keyframesArg, optionsArg] = animateSpy.mock.calls[0];
@@ -67,7 +77,13 @@ describe("registerAnimation", () => {
   });
 
   it("falls back to built-in flow when no custom animation exists", () => {
-    play(div, makeOpts({ keyframes: "unknown-preset" as any }));
+    // Prepare the element before calling play
+    const options = makeOpts({ keyframes: "unknown-preset" as any });
+    const mosElement = prepareElement(div, options);
+    if (mosElement) {
+      updatePreparedElements([mosElement]);
+    }
+    play(div, options);
     expect(animateSpy).toHaveBeenCalledTimes(1);
   });
 
