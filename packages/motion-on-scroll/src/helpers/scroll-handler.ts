@@ -56,15 +56,8 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
   const hideElement = (): void => {
     if (!elementData.animated || elementData.isReversing) return;
 
-    // Start reverse animation with completion callback
-    reverse(element, () => {
-      // Sync state when reverse animation completes
-      elementData.animated = false;
-      elementData.isReversing = false;
-    });
-
-    // Mark as reversing immediately for state tracking
-    elementData.isReversing = true;
+    // Start reverse animation
+    reverse(element);
   };
 
   /**
@@ -76,8 +69,6 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
 
     // Start forward animation
     play(element, options);
-    elementData.animated = true;
-    elementData.isReversing = false;
   };
 
   if (

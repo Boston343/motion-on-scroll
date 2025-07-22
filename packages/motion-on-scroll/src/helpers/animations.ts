@@ -178,13 +178,6 @@ function handleReverseAnimationCompletion(
   // Update state
   mosElement.isReversing = false;
   mosElement.animated = false;
-
-  // Call reverse completion callback if stored
-  const reverseCallback = (mosElement as any).reverseCallback;
-  if (reverseCallback) {
-    reverseCallback();
-    delete (mosElement as any).reverseCallback;
-  }
 }
 
 /**
@@ -213,7 +206,6 @@ function handleAnimationInterruption(element: HTMLElement): void {
   const mosElement = findPreparedElement(element);
   if (mosElement) {
     mosElement.isReversing = false;
-    delete (mosElement as any).reverseCallback;
   }
 }
 
@@ -396,9 +388,8 @@ export function play(element: HTMLElement, options: ElementOptions): void {
  * Uses negative playback speed to smoothly reverse the animation
  *
  * @param element - The DOM element to reverse animation for
- * @param onComplete - Optional callback to call when reverse completes
  */
-export function reverse(element: HTMLElement, onComplete?: () => void): void {
+export function reverse(element: HTMLElement): void {
   const mosElement = findPreparedElement(element);
   if (!mosElement?.controls) return;
 
@@ -408,11 +399,6 @@ export function reverse(element: HTMLElement, onComplete?: () => void): void {
   mosElement.isReversing = true;
   controls.speed = -1;
   controls.play();
-
-  // Store completion callback for later execution
-  if (onComplete) {
-    (mosElement as any).reverseCallback = onComplete;
-  }
 
   // Mark as actively animating
   activeAnimations.set(element, controls);
