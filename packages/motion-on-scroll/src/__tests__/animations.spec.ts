@@ -5,7 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { play } from "../helpers/animations.js";
 import { EASINGS } from "../helpers/constants.js";
 import { DEFAULT_OPTIONS } from "../helpers/constants.js";
-import { prepareElement, updatePreparedElements, clearAllElements } from "../helpers/elements.js";
+import { clearAllElements, prepareElement, updatePreparedElements } from "../helpers/elements.js";
 import type { ElementOptions } from "../helpers/types.js";
 
 // Provide a DOM for motion to query
@@ -37,10 +37,10 @@ describe("play/reset", () => {
 
   beforeEach(() => {
     div = document.createElement("div");
-    
+
     // Clear any existing prepared elements
     clearAllElements();
-    
+
     // reset call history before each test
     vi.clearAllMocks();
   });
