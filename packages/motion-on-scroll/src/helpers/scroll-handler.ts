@@ -9,8 +9,8 @@ import { play, reverse, setFinalState, setInitialState } from "./animations.js";
 import { DEFAULT_OPTIONS } from "./constants.js";
 import { getPreparedElements } from "./elements.js";
 import { getPositionIn, getPositionOut, isElementAboveViewport } from "./position-calculator.js";
-import type { ElementOptions, MosElement } from "./types.js";
-import { debounce, throttle } from "./utils.js";
+import type { MosElement } from "./types.js";
+import { throttle } from "./utils.js";
 
 // ===================================================================
 // MODULE STATE
@@ -37,7 +37,7 @@ let currentThrottleDelay = DEFAULT_OPTIONS.throttleDelay;
  * @param scrollY - Current vertical scroll position
  */
 function updateElementAnimationState(elementData: MosElement, scrollY: number): void {
-  const { element, options, position } = elementData;
+  const { options, position } = elementData;
 
   /**
    * Hides the element by reversing its animation
@@ -129,18 +129,16 @@ function setElementInitialState(elementData: MosElement): void {
 }
 
 /**
- * Recalculates trigger positions for all elements after layout changes
- * Called on window resize and orientation change events
+ * Refreshes all tracked elements by recalculating positions and states
+ * Called when the library needs to update after configuration changes
  */
-function recalculateAllPositions(): void {
-  // Use the unified element system's recalculation function
-  // This will be called with the global options from the main module
-  // For now, we'll update positions manually and then process scroll
+export function evaluateElementPositions(): void {
   getPreparedElements().forEach((elementData) => {
     calculateElementTriggerPositions(elementData);
+    setElementInitialState(elementData);
   });
 
-  // Update animation states based on new positions
+  // Process current scroll position to animate elements already in viewport
   processScrollEvent();
 }
 
@@ -193,20 +191,9 @@ export function cleanupScrollHandler(): void {
   }
 }
 
-// ===================================================================
-// PUBLIC API
-// ===================================================================
-
-/**
- * Refreshes all tracked elements by recalculating positions and states
- * Called when the library needs to update after configuration changes
- */
-export function refreshElements(): void {
-  getPreparedElements().forEach((elementData) => {
-    calculateElementTriggerPositions(elementData);
-    setElementInitialState(elementData);
-  });
-
-  // Process current scroll position to animate elements already in viewport
-  processScrollEvent();
-}
+export default {
+  cleanupScrollHandler,
+  ensureScrollHandlerActive,
+  evaluateElementPositions,
+  updateScrollHandlerDelays,
+};
