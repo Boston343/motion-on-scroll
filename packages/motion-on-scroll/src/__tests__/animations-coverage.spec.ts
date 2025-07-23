@@ -69,7 +69,7 @@ describe("animations coverage tests", () => {
       const fakeMosElement = {
         element: unpreparedDiv,
         options: makeOpts(),
-        position: { in: 100 },
+        position: { in: 100, out: false as const },
         animated: false,
         isReversing: false,
       };
@@ -154,7 +154,7 @@ describe("animations coverage tests", () => {
       const fakeMosElement = {
         element: div,
         options: makeOpts(),
-        position: { in: 100 },
+        position: { in: 100, out: false as const },
         animated: false,
         isReversing: false,
       };
@@ -191,7 +191,7 @@ describe("animations coverage tests", () => {
       const fakeMosElement = {
         element: div,
         options: makeOpts(),
-        position: { in: 100 },
+        position: { in: 100, out: false as const },
         animated: false,
         isReversing: false,
       };
@@ -323,7 +323,8 @@ describe("animations coverage tests", () => {
 
       animateSpy.mockReturnValueOnce(mockControls);
 
-      play(div, makeOpts());
+      const mosElement = prepareTestDiv();
+      play(mosElement);
 
       // Clear elements to simulate missing mosElement in completion handler
       clearAllElements();
