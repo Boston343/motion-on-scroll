@@ -56,24 +56,36 @@ describe("registerAnimation", () => {
   });
 
   it("uses user-registered animation when key matches", () => {
-    const NAME = "bounce-in";
+    const NAME = "custom-test-animation";
     const KEYFRAMES = { opacity: [0, 1], scale: [0.4, 1] };
 
-    registerAnimation(NAME, (el) => motion.animate(el, KEYFRAMES, { duration: 0.5 }));
+    // Create a spy for the custom animation factory
+    const customFactory = vi.fn((el) => motion.animate(el, KEYFRAMES, { duration: 0.5 }));
+    registerAnimation(NAME, customFactory);
+
+    // Set the data-mos attribute to the custom animation name
+    div.setAttribute("data-mos", NAME);
 
     // Prepare the element before calling play
-    const options = makeOpts({ keyframes: NAME });
+    const options = makeOpts(); // Use default options
     const mosElement = prepareElement(div, options);
     if (mosElement) {
       updatePreparedElements([mosElement]);
-    }
-    play(div, options);
+      play(mosElement);
 
-    expect(animateSpy).toHaveBeenCalledTimes(1);
-    const [elArg, keyframesArg, optionsArg] = animateSpy.mock.calls[0];
-    expect(elArg).toBe(div);
-    expect(keyframesArg).toEqual(KEYFRAMES);
-    expect(optionsArg.duration).toBe(0.5);
+      // Verify the custom factory was called
+      expect(customFactory).toHaveBeenCalledTimes(1);
+      expect(customFactory).toHaveBeenCalledWith(div, expect.any(Object));
+      
+      // Verify motion.animate was called with custom keyframes
+      expect(animateSpy).toHaveBeenCalledTimes(1);
+      const [elArg, keyframesArg, optionsArg] = animateSpy.mock.calls[0];
+      expect(elArg).toBe(div);
+      expect(keyframesArg).toEqual(KEYFRAMES);
+      expect(optionsArg.duration).toBe(0.5);
+    } else {
+      throw new Error("Failed to prepare element for test");
+    }
   });
 
   it("falls back to built-in flow when no custom animation exists", () => {
@@ -82,8 +94,10 @@ describe("registerAnimation", () => {
     const mosElement = prepareElement(div, options);
     if (mosElement) {
       updatePreparedElements([mosElement]);
+      play(mosElement);
+    } else {
+      throw new Error("Failed to prepare element for test");
     }
-    play(div, options);
     expect(animateSpy).toHaveBeenCalledTimes(1);
   });
 

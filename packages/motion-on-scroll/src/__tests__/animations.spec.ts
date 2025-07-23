@@ -21,14 +21,19 @@ function makeOpts(partial: Partial<ElementOptions> = {}): ElementOptions {
   return { ...DEFAULT_OPTIONS, keyframes: "fade", once: false, ...partial } as ElementOptions;
 }
 
-// Helper to prepare an element for testing
-function prepareTestElement(div: HTMLElement, options: ElementOptions): void {
+// Helper to prepare an element for testing and return MosElement
+function prepareTestElement(
+  div: HTMLElement,
+  options: ElementOptions,
+): import("../helpers/types.js").MosElement {
   div.setAttribute("data-mos", options.keyframes || "fade");
   document.body.appendChild(div);
   const mosElement = prepareElement(div, options);
   if (mosElement) {
     updatePreparedElements([mosElement]);
+    return mosElement;
   }
+  throw new Error("Failed to prepare test element");
 }
 
 describe("play/reset", () => {
@@ -48,8 +53,8 @@ describe("play/reset", () => {
   it("overrides translateY for fade-up with custom distance", () => {
     const DIST = 80;
     const options = makeOpts({ keyframes: "fade-up", distance: DIST });
-    prepareTestElement(div, options);
-    play(div, options);
+    const mosElement = prepareTestElement(div, options);
+    play(mosElement);
 
     expect(animateSpy).toHaveBeenCalledTimes(1);
     const [_, keyframes] = animateSpy.mock.calls[0];
@@ -58,39 +63,38 @@ describe("play/reset", () => {
 
   it("falls back to default easing when given invalid easing", () => {
     const options = makeOpts({ easing: "totally-invalid" as any });
-    prepareTestElement(div, options);
-    play(div, options);
+    const mosElement = prepareTestElement(div, options);
+    play(mosElement);
 
     const [_el, _kf, opts] = animateSpy.mock.calls[0];
-    const expectedEase = EASINGS[DEFAULT_OPTIONS.easing as keyof typeof EASINGS];
+    const expectedEase = EASINGS[DEFAULT_OPTIONS.easing];
     expect((opts as any).ease).toEqual(expectedEase);
   });
 
   it("does not trigger a second animation while one is already running", () => {
     const options = makeOpts();
-    prepareTestElement(div, options);
-    play(div, options);
-    play(div, options);
+    const mosElement = prepareTestElement(div, options);
+    play(mosElement);
+    play(mosElement);
     expect(animateSpy).toHaveBeenCalledTimes(1);
   });
 
   it("stops controls automatically when opts.once is true", async () => {
     const options = makeOpts({ once: true });
-    prepareTestElement(div, options);
-    play(div, options);
+    const mosElement = prepareTestElement(div, options);
+    play(mosElement);
     const controls = animateSpy.mock.results[0].value;
-    // flush microtasks so .finished promise handlers run
+    // flush microtasks so .finished promise resolves
     await Promise.resolve();
     expect(controls.stop).toHaveBeenCalled();
   });
 
   it("handles directional slide-left distance override", () => {
-    const DIST = 120;
-    const options = makeOpts({ keyframes: "slide-left", distance: DIST });
-    prepareTestElement(div, options);
-    play(div, options);
+    const options = makeOpts({ keyframes: "slide-left", distance: 100 });
+    const mosElement = prepareTestElement(div, options);
+    play(mosElement);
     const [, keyframes] = animateSpy.mock.calls[0];
-    expect((keyframes as any).translateX).toEqual([DIST, 0]);
+    expect((keyframes as any).translateX).toEqual([100, 0]);
   });
 
   /**
@@ -128,8 +132,8 @@ describe("play/reset", () => {
   DIR_PRESETS.forEach(([preset, axis, sign]) => {
     it(`${preset} applies translate${axis} with correct sign`, () => {
       const options = makeOpts({ keyframes: preset as any, distance: DIST });
-      prepareTestElement(div, options);
-      play(div, options);
+      const mosElement = prepareTestElement(div, options);
+      play(mosElement);
       const [, keyframes] = animateSpy.mock.calls[0];
       const prop = axis === "X" ? "translateX" : "translateY";
       expect((keyframes as any)[prop]).toEqual([DIST * sign, 0]);
