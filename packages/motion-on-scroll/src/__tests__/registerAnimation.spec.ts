@@ -76,7 +76,7 @@ describe("registerAnimation", () => {
       // Verify the custom factory was called
       expect(customFactory).toHaveBeenCalledTimes(1);
       expect(customFactory).toHaveBeenCalledWith(div, expect.any(Object));
-      
+
       // Verify motion.animate was called with custom keyframes
       expect(animateSpy).toHaveBeenCalledTimes(1);
       const [elArg, keyframesArg, optionsArg] = animateSpy.mock.calls[0];

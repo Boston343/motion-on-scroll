@@ -3,8 +3,8 @@ import * as motion from "motion";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { play, reverse, setFinalState, setInitialState } from "../helpers/animations.js";
-import { clearAllElements, prepareElement, updatePreparedElements } from "../helpers/elements.js";
 import { DEFAULT_OPTIONS } from "../helpers/constants.js";
+import { clearAllElements, prepareElement, updatePreparedElements } from "../helpers/elements.js";
 import type { ElementOptions } from "../helpers/types.js";
 
 // ---------------------------------------------------------------------------
@@ -60,14 +60,14 @@ describe("state helpers", () => {
   beforeEach(() => {
     div = document.createElement("div");
     div.setAttribute("data-mos", "fade");
-    
+
     // Clear all elements and add our test element to the unified tracking system
     clearAllElements();
     const mosElement = prepareElement(div, makeOpts());
     if (mosElement) {
       updatePreparedElements([mosElement]);
     }
-    
+
     vi.clearAllMocks();
   });
 
@@ -81,7 +81,7 @@ describe("state helpers", () => {
       expect(animateSpy).toHaveBeenCalledTimes(1);
       const controls = animateSpy.mock.results[0].value;
       expect(controls.pause).toHaveBeenCalled();
-      
+
       // setInitialState should not add the CSS class
       expect(div.classList.contains("mos-animate")).toBe(false);
     }
@@ -109,7 +109,7 @@ describe("state helpers", () => {
     if (mosElement) {
       updatePreparedElements([mosElement]);
       setFinalState(mosElement);
-      
+
       expect(animateSpy).toHaveBeenCalledTimes(1);
       const controls = animateSpy.mock.results[0].value;
       expect(controls.complete).toHaveBeenCalled();
@@ -125,7 +125,7 @@ describe("state helpers", () => {
     const mosElement = prepareElement(div, makeOpts());
     if (mosElement) {
       updatePreparedElements([mosElement]);
-      
+
       // Forward play creates controls and css class
       play(mosElement);
       expect(div.classList.contains("mos-animate")).toBe(true);
