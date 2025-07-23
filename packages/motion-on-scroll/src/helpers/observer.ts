@@ -80,3 +80,7 @@ export function startDomObserver(): void {
     subtree: true,
   });
 }
+
+export default {
+  startDomObserver,
+};

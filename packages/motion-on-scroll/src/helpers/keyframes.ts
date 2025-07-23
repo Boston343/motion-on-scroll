@@ -109,3 +109,9 @@ export function getKeyframesWithDistance(opts: ElementOptions, resolvedKeyframes
 
   return keyframes;
 }
+
+export default {
+  getKeyframesWithDistance,
+  registerKeyframes,
+  resolveKeyframes,
+};

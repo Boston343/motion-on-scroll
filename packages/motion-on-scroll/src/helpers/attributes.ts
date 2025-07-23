@@ -40,3 +40,7 @@ function cleanUndefined<T extends Record<string, any>>(obj: T): Partial<T> {
   }
   return result;
 }
+
+export default {
+  resolveElementOptions,
+};

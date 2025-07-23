@@ -97,3 +97,10 @@ export function removeMosAttributes(el: Element): void {
     }
   }
 }
+
+export default {
+  debounce,
+  isDisabled,
+  removeMosAttributes,
+  throttle,
+};

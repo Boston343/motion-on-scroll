@@ -124,3 +124,13 @@ export function updatePreparedElements(elements: MosElement[]): void {
 export function clearAllElements(): void {
   mosElements = [];
 }
+
+export default {
+  clearAllElements,
+  findPreparedElement,
+  getMosElements,
+  getPreparedElements,
+  prepareElement,
+  prepareElements,
+  updatePreparedElements,
+};

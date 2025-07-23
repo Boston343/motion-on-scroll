@@ -13,7 +13,7 @@ import { startDomObserver } from "./helpers/observer.js";
 import {
   cleanupScrollHandler,
   ensureScrollHandlerActive,
-  refreshElements,
+  evaluateElementPositions,
   updateScrollHandlerDelays,
 } from "./helpers/scroll-handler.js";
 import type { MosOptions, PartialMosOptions } from "./helpers/types.js";
@@ -62,7 +62,7 @@ function adjustTimeUnitsOnFirstInit(config: MosOptions): void {
  */
 export function handleLayoutChange(): void {
   if (isLibraryActive) {
-    refreshElements();
+    evaluateElementPositions();
   }
 }
 
@@ -166,7 +166,7 @@ function refresh(shouldActivate = false): void {
     ensureScrollHandlerActive();
 
     // Calculate positions and set initial states for all elements
-    refreshElements();
+    evaluateElementPositions();
   }
 }
 
