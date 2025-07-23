@@ -57,7 +57,7 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
     if (!elementData.animated || elementData.isReversing) return;
 
     // Start reverse animation
-    reverse(element);
+    reverse(elementData);
   };
 
   /**
@@ -68,7 +68,7 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
     if (elementData.animated && !elementData.isReversing) return;
 
     // Start forward animation
-    play(element, options);
+    play(elementData);
   };
 
   if (
@@ -131,16 +131,11 @@ function setElementInitialState(elementData: MosElement): void {
 
   if (isElementAboveViewport(element) && !options.mirror) {
     // Element is above viewport - set to final animated state immediately
-    setFinalState(element, options);
-    elementData.animated = true;
+    setFinalState(elementData);
   } else {
     // Element is in or below viewport - set to initial state
-    setInitialState(element, options);
-    elementData.animated = false;
+    setInitialState(elementData);
   }
-
-  // Reset reversing state
-  elementData.isReversing = false;
 }
 
 /**

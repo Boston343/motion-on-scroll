@@ -109,18 +109,16 @@ function ensureAnimationControls(
  * Creates animation controls but preserves natural position for accurate scroll calculations
  * CSS handles initial visibility (opacity: 0, visibility: hidden, etc.)
  *
- * @param element - The DOM element to set initial state for
- * @param options - Animation configuration options
+ * @param mosElement - The MOS element data containing element, options, and state
  */
-export function setInitialState(element: HTMLElement, options: ElementOptions): void {
+export function setInitialState(mosElement: MosElement): void {
+  const { element, options } = mosElement;
+
   // Skip if element is currently animating
   if (activeAnimations.has(element)) return;
 
   const controls = ensureAnimationControls(element, options);
   if (!controls) return;
-
-  const mosElement = findPreparedElement(element);
-  if (!mosElement) return;
 
   // Pause controls without setting time to preserve natural element position
   // This is crucial for accurate scroll position calculations
@@ -324,10 +322,11 @@ function resolveAnimationEasing(options: ElementOptions): any {
  * Used for elements that are above the viewport on page load
  * Uses Motion's complete() method to properly set final state for smooth reversal
  *
- * @param element - The DOM element to set final state for
- * @param options - Animation configuration options
+ * @param mosElement - The MOS element data containing element, options, and state
  */
-export function setFinalState(element: HTMLElement, options: ElementOptions): void {
+export function setFinalState(mosElement: MosElement): void {
+  const { element, options } = mosElement;
+
   const controls = ensureAnimationControls(element, options);
   if (!controls) return;
 
@@ -339,11 +338,8 @@ export function setFinalState(element: HTMLElement, options: ElementOptions): vo
   element.classList.add("mos-animate");
 
   // Update element state
-  const mosElement = findPreparedElement(element);
-  if (mosElement) {
-    mosElement.animated = true;
-    mosElement.isReversing = false;
-  }
+  mosElement.animated = true;
+  mosElement.isReversing = false;
 }
 
 // ===================================================================
@@ -354,16 +350,14 @@ export function setFinalState(element: HTMLElement, options: ElementOptions): vo
  * Plays the animation for an element in the forward direction
  * Creates animation controls if they don't exist, otherwise reuses existing ones
  *
- * @param element - The DOM element to animate
- * @param options - Animation configuration options
+ * @param mosElement - The MOS element data containing element, options, and state
  */
-export function play(element: HTMLElement, options: ElementOptions): void {
+export function play(mosElement: MosElement): void {
+  const { element, options } = mosElement;
+
   // Ensure animation controls exist
   const controls = ensureAnimationControls(element, options);
   if (!controls) return;
-
-  const mosElement = findPreparedElement(element);
-  if (!mosElement) return;
 
   const existingAnimation = activeAnimations.get(element);
 
@@ -387,13 +381,12 @@ export function play(element: HTMLElement, options: ElementOptions): void {
  * Reverses the animation for an element (used for scroll up behavior)
  * Uses negative playback speed to smoothly reverse the animation
  *
- * @param element - The DOM element to reverse animation for
+ * @param mosElement - The MOS element data containing element, options, and state
  */
-export function reverse(element: HTMLElement): void {
-  const mosElement = findPreparedElement(element);
-  if (!mosElement?.controls) return;
+export function reverse(mosElement: MosElement): void {
+  if (!mosElement.controls) return;
 
-  const controls = mosElement.controls;
+  const { element, controls } = mosElement;
 
   // Configure for reverse playback
   mosElement.isReversing = true;
