@@ -22,19 +22,9 @@ import { debounce, throttle } from "./utils.js";
 let activeScrollHandler: ((...args: any[]) => void) | null = null;
 
 /**
- * Reference to the active (debounced) resize/orientation handler (for cleanup)
- */
-let activeResizeHandler: ((...args: any[]) => void) | null = null;
-
-/**
  * Current throttle delay for scroll events (configurable)
  */
 let currentThrottleDelay = DEFAULT_OPTIONS.throttleDelay;
-
-/**
- * Current debounce delay for resize events (configurable)
- */
-let currentDebounceDelay = DEFAULT_OPTIONS.debounceDelay;
 
 // ===================================================================
 // ANIMATION STATE MANAGEMENT
@@ -159,14 +149,12 @@ function recalculateAllPositions(): void {
 // ===================================================================
 
 /**
- * Updates the throttle and debounce delays used by the scroll handler
+ * Updates the throttle delay used by the scroll handler
  * Called from the main initialization to apply user configuration
  * @param throttleDelay - Delay in ms for throttling scroll events
- * @param debounceDelay - Delay in ms for debouncing resize events
  */
-export function updateScrollHandlerDelays(throttleDelay: number, debounceDelay: number): void {
+export function updateScrollHandlerDelays(throttleDelay: number): void {
   currentThrottleDelay = throttleDelay;
-  currentDebounceDelay = debounceDelay;
 }
 
 // ===================================================================
@@ -174,40 +162,21 @@ export function updateScrollHandlerDelays(throttleDelay: number, debounceDelay: 
 // ===================================================================
 
 /**
- * Initializes the scroll event handler system with throttling and debouncing
- * Sets up listeners for scroll, resize, and orientation change events
+ * Initializes the scroll event handler system with throttling
+ * Sets up listener for scroll events only (layout changes handled in index.ts)
  */
 export function ensureScrollHandlerActive(): void {
   // Prevent multiple initializations
   if (activeScrollHandler) return;
 
-  // Create throttled and debounced handlers for performance
+  // Create throttled scroll handler for performance
   const throttledScrollHandler = throttle(processScrollEvent, currentThrottleDelay);
-  const debouncedPositionRecalculator = debounce(recalculateAllPositions, currentDebounceDelay);
 
-  // Set up event listeners
-  setupScrollEventListeners(throttledScrollHandler, debouncedPositionRecalculator);
+  // Set up scroll event listener
+  window.addEventListener("scroll", throttledScrollHandler, { passive: true });
 
-  // Store references for cleanup
+  // Store reference for cleanup
   activeScrollHandler = throttledScrollHandler;
-  activeResizeHandler = debouncedPositionRecalculator;
-}
-
-/**
- * Sets up all necessary event listeners for scroll handling
- * @param scrollHandler - Throttled scroll event handler
- * @param resizeHandler - Debounced resize event handler
- */
-function setupScrollEventListeners(
-  scrollHandler: (...args: any[]) => void,
-  resizeHandler: (...args: any[]) => void,
-): void {
-  // Scroll events (throttled for performance)
-  window.addEventListener("scroll", scrollHandler, { passive: true });
-
-  // Layout change events (debounced to prevent excessive recalculation)
-  window.addEventListener("resize", resizeHandler);
-  window.addEventListener("orientationchange", resizeHandler);
 }
 
 /**
@@ -216,16 +185,11 @@ function setupScrollEventListeners(
  */
 export function cleanupScrollHandler(): void {
   if (activeScrollHandler) {
-    // Remove all event listeners
+    // Remove scroll event listener
     window.removeEventListener("scroll", activeScrollHandler);
-    if (activeResizeHandler) {
-      window.removeEventListener("resize", activeResizeHandler);
-      window.removeEventListener("orientationchange", activeResizeHandler);
-    }
 
-    // Clear handler references
+    // Clear handler reference
     activeScrollHandler = null;
-    activeResizeHandler = null;
   }
 }
 
@@ -245,5 +209,4 @@ export function refreshElements(): void {
 
   // Process current scroll position to animate elements already in viewport
   processScrollEvent();
-  // processScrollEvent();
 }

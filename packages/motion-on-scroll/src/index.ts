@@ -155,11 +155,11 @@ function refresh(shouldActivate = false): void {
   if (shouldActivate) isLibraryActive = true;
   if (isLibraryActive) {
     // Configure performance settings from library config
-    updateScrollHandlerDelays(libraryConfig.throttleDelay, libraryConfig.debounceDelay);
+    updateScrollHandlerDelays(libraryConfig.throttleDelay);
 
     const foundElements = getMosElements();
 
-    // Use unified element system to prepare elements (reusing found elements)
+    // Use unified element system to prepare elements (reusing previously found elements)
     prepareElements(foundElements, libraryConfig);
 
     // Ensure scroll handler is active to process all prepared elements
