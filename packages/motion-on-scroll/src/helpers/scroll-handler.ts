@@ -7,18 +7,14 @@
 
 import { play, reverse, setFinalState, setInitialState } from "./animations.js";
 import { DEFAULT_OPTIONS } from "./constants.js";
+import { getPreparedElements } from "./elements.js";
 import { getPositionIn, getPositionOut, isElementAboveViewport } from "./position-calculator.js";
-import type { ElementOptions, MosElement } from "./types.js";
-import { debounce, throttle } from "./utils.js";
+import type { MosElement } from "./types.js";
+import { throttle } from "./utils.js";
 
 // ===================================================================
 // MODULE STATE
 // ===================================================================
-
-/**
- * Array of all elements currently being tracked for scroll animations
- */
-let trackedElements: MosElement[] = [];
 
 /**
  * Reference to the active scroll event handler (for cleanup)
@@ -26,19 +22,9 @@ let trackedElements: MosElement[] = [];
 let activeScrollHandler: ((...args: any[]) => void) | null = null;
 
 /**
- * Reference to the active (debounced) resize/orientation handler (for cleanup)
- */
-let activeResizeHandler: ((...args: any[]) => void) | null = null;
-
-/**
  * Current throttle delay for scroll events (configurable)
  */
 let currentThrottleDelay = DEFAULT_OPTIONS.throttleDelay;
-
-/**
- * Current debounce delay for resize events (configurable)
- */
-let currentDebounceDelay = DEFAULT_OPTIONS.debounceDelay;
 
 // ===================================================================
 // ANIMATION STATE MANAGEMENT
@@ -51,7 +37,7 @@ let currentDebounceDelay = DEFAULT_OPTIONS.debounceDelay;
  * @param scrollY - Current vertical scroll position
  */
 function updateElementAnimationState(elementData: MosElement, scrollY: number): void {
-  const { element, options, position } = elementData;
+  const { options, position } = elementData;
 
   /**
    * Hides the element by reversing its animation
@@ -60,15 +46,8 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
   const hideElement = (): void => {
     if (!elementData.animated || elementData.isReversing) return;
 
-    // Start reverse animation with completion callback
-    reverse(element, () => {
-      // Sync state when reverse animation completes
-      elementData.animated = false;
-      elementData.isReversing = false;
-    });
-
-    // Mark as reversing immediately for state tracking
-    elementData.isReversing = true;
+    // Start reverse animation
+    reverse(elementData);
   };
 
   /**
@@ -79,9 +58,7 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
     if (elementData.animated && !elementData.isReversing) return;
 
     // Start forward animation
-    play(element, options);
-    elementData.animated = true;
-    elementData.isReversing = false;
+    play(elementData);
   };
 
   if (
@@ -110,8 +87,8 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
 function processScrollEvent(): void {
   const currentScrollY = window.scrollY;
 
-  // Update animation state for all tracked elements
-  trackedElements.forEach((elementData) => {
+  // Update animation state for all prepared elements
+  getPreparedElements().forEach((elementData) => {
     updateElementAnimationState(elementData, currentScrollY);
   });
 }
@@ -119,20 +96,6 @@ function processScrollEvent(): void {
 // ===================================================================
 // ELEMENT PREPARATION AND POSITIONING
 // ===================================================================
-
-/**
- * Prepares all tracked elements by calculating their trigger positions
- * and setting their initial animation states
- */
-function prepareAllElements(): void {
-  trackedElements.forEach((elementData) => {
-    calculateElementTriggerPositions(elementData);
-    setElementInitialState(elementData);
-  });
-
-  // Process current scroll position to animate elements already in viewport
-  processScrollEvent();
-}
 
 /**
  * Calculates the scroll positions that will trigger animations for an element
@@ -158,28 +121,24 @@ function setElementInitialState(elementData: MosElement): void {
 
   if (isElementAboveViewport(element) && !options.mirror) {
     // Element is above viewport - set to final animated state immediately
-    setFinalState(element, options);
-    elementData.animated = true;
+    setFinalState(elementData);
   } else {
     // Element is in or below viewport - set to initial state
-    setInitialState(element, options);
-    elementData.animated = false;
+    setInitialState(elementData);
   }
-
-  // Reset reversing state
-  elementData.isReversing = false;
 }
 
 /**
- * Recalculates trigger positions for all elements after layout changes
- * Called on window resize and orientation change events
+ * Refreshes all tracked elements by recalculating positions and states
+ * Called when the library needs to update after configuration changes
  */
-function recalculateAllPositions(): void {
-  trackedElements.forEach((elementData) => {
+export function evaluateElementPositions(): void {
+  getPreparedElements().forEach((elementData) => {
     calculateElementTriggerPositions(elementData);
+    setElementInitialState(elementData);
   });
 
-  // Update animation states based on new positions
+  // Process current scroll position to animate elements already in viewport
   processScrollEvent();
 }
 
@@ -188,82 +147,12 @@ function recalculateAllPositions(): void {
 // ===================================================================
 
 /**
- * Updates the throttle and debounce delays used by the scroll handler
+ * Updates the throttle delay used by the scroll handler
  * Called from the main initialization to apply user configuration
  * @param throttleDelay - Delay in ms for throttling scroll events
- * @param debounceDelay - Delay in ms for debouncing resize events
  */
-export function updateScrollHandlerDelays(throttleDelay: number, debounceDelay: number): void {
+export function updateScrollHandlerDelays(throttleDelay: number): void {
   currentThrottleDelay = throttleDelay;
-  currentDebounceDelay = debounceDelay;
-}
-
-// ===================================================================
-// ELEMENT OBSERVATION MANAGEMENT
-// ===================================================================
-
-/**
- * Adds an element to scroll-based animation tracking
- * If element is already being tracked, updates its options
- * @param element - The DOM element to observe
- * @param options - Animation configuration for this element
- */
-export function observeElement(element: HTMLElement, options: ElementOptions): void {
-  // Apply any custom delays from element options
-  updateScrollHandlerDelays(
-    options.throttleDelay ?? DEFAULT_OPTIONS.throttleDelay,
-    options.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
-  );
-
-  // Check if element is already being tracked
-  const existingElementIndex = findTrackedElementIndex(element);
-
-  if (existingElementIndex !== -1) {
-    // Update existing element's options
-    const existingElement = trackedElements[existingElementIndex]!;
-    existingElement.options = options;
-  } else {
-    // Add new element to tracking
-    addElementToTracking(element, options);
-  }
-
-  // Ensure scroll handler is active
-  ensureScrollHandlerActive();
-}
-
-/**
- * Finds the index of an element in the tracked elements array
- * @param element - The element to find
- * @returns Index of the element, or -1 if not found
- */
-function findTrackedElementIndex(element: HTMLElement): number {
-  return trackedElements.findIndex((elementData) => elementData.element === element);
-}
-
-/**
- * Adds a new element to the tracking array with default state
- * @param element - The DOM element to add
- * @param options - Animation configuration for this element
- */
-function addElementToTracking(element: HTMLElement, options: ElementOptions): void {
-  trackedElements.push({
-    element,
-    options,
-    position: { in: 0, out: false }, // Will be calculated later
-    animated: false,
-    isReversing: false,
-  });
-}
-
-/**
- * Removes an element from scroll-based animation tracking
- * @param element - The DOM element to stop observing
- */
-export function unobserveElement(element: HTMLElement): void {
-  const elementIndex = findTrackedElementIndex(element);
-  if (elementIndex !== -1) {
-    trackedElements.splice(elementIndex, 1);
-  }
 }
 
 // ===================================================================
@@ -271,40 +160,21 @@ export function unobserveElement(element: HTMLElement): void {
 // ===================================================================
 
 /**
- * Initializes the scroll event handler system with throttling and debouncing
- * Sets up listeners for scroll, resize, and orientation change events
+ * Initializes the scroll event handler system with throttling
+ * Sets up listener for scroll events only (layout changes handled in index.ts)
  */
-function ensureScrollHandlerActive(): void {
+export function ensureScrollHandlerActive(): void {
   // Prevent multiple initializations
   if (activeScrollHandler) return;
 
-  // Create throttled and debounced handlers for performance
+  // Create throttled scroll handler for performance
   const throttledScrollHandler = throttle(processScrollEvent, currentThrottleDelay);
-  const debouncedPositionRecalculator = debounce(recalculateAllPositions, currentDebounceDelay);
 
-  // Set up event listeners
-  setupScrollEventListeners(throttledScrollHandler, debouncedPositionRecalculator);
+  // Set up scroll event listener
+  window.addEventListener("scroll", throttledScrollHandler, { passive: true });
 
-  // Store references for cleanup
+  // Store reference for cleanup
   activeScrollHandler = throttledScrollHandler;
-  activeResizeHandler = debouncedPositionRecalculator;
-}
-
-/**
- * Sets up all necessary event listeners for scroll handling
- * @param scrollHandler - Throttled scroll event handler
- * @param resizeHandler - Debounced resize event handler
- */
-function setupScrollEventListeners(
-  scrollHandler: (...args: any[]) => void,
-  resizeHandler: (...args: any[]) => void,
-): void {
-  // Scroll events (throttled for performance)
-  window.addEventListener("scroll", scrollHandler, { passive: true });
-
-  // Layout change events (debounced to prevent excessive recalculation)
-  window.addEventListener("resize", resizeHandler);
-  window.addEventListener("orientationchange", resizeHandler);
 }
 
 /**
@@ -313,31 +183,17 @@ function setupScrollEventListeners(
  */
 export function cleanupScrollHandler(): void {
   if (activeScrollHandler) {
-    // Remove all event listeners
+    // Remove scroll event listener
     window.removeEventListener("scroll", activeScrollHandler);
-    if (activeResizeHandler) {
-      window.removeEventListener("resize", activeResizeHandler);
-      window.removeEventListener("orientationchange", activeResizeHandler);
-    }
 
-    // Clear handler references
+    // Clear handler reference
     activeScrollHandler = null;
-    activeResizeHandler = null;
   }
-
-  // Clear all tracked elements
-  trackedElements = [];
 }
 
-// ===================================================================
-// PUBLIC API
-// ===================================================================
-
-/**
- * Refreshes all tracked elements by recalculating positions and states
- * Called when the library needs to update after configuration changes
- */
-export function refreshElements(): void {
-  prepareAllElements();
-  processScrollEvent();
-}
+export default {
+  cleanupScrollHandler,
+  ensureScrollHandlerActive,
+  evaluateElementPositions,
+  updateScrollHandlerDelays,
+};

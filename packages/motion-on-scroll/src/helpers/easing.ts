@@ -95,3 +95,8 @@ export function registerEasing(name: string, definition: EasingDefinition | stri
     customEasings[name] = definition;
   }
 }
+
+export default {
+  registerEasing,
+  resolveEasing,
+};

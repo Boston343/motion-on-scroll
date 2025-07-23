@@ -5,18 +5,18 @@
 // It handles initialization, configuration, and lifecycle management.
 
 import { registerAnimation } from "./helpers/animations.js";
-import { resolveElementOptions } from "./helpers/attributes.js";
 import { DEFAULT_OPTIONS } from "./helpers/constants.js";
 import { registerEasing } from "./helpers/easing.js";
+import { clearAllElements, getMosElements, prepareElements } from "./helpers/elements.js";
 import { registerKeyframes } from "./helpers/keyframes.js";
 import { startDomObserver } from "./helpers/observer.js";
 import {
   cleanupScrollHandler,
-  observeElement as startObservingElement,
-  refreshElements,
+  ensureScrollHandlerActive,
+  evaluateElementPositions,
   updateScrollHandlerDelays,
 } from "./helpers/scroll-handler.js";
-import type { ElementOptions, MosOptions, PartialMosOptions } from "./helpers/types.js";
+import type { MosOptions, PartialMosOptions } from "./helpers/types.js";
 import { debounce, isDisabled, removeMosAttributes } from "./helpers/utils.js";
 
 // ===================================================================
@@ -32,57 +32,6 @@ let libraryConfig: MosOptions = DEFAULT_OPTIONS;
  * Tracks whether the library has been initialized and is actively running
  */
 let isLibraryActive = false;
-
-/**
- * Tracks all elements currently being tracked for scroll animations
- */
-let MosElements: HTMLElement[] = [];
-
-/**
- * Set of elements already being observed to prevent duplicate observations
- */
-const observedElements = new WeakSet<HTMLElement>();
-
-// ===================================================================
-// ELEMENT DISCOVERY AND MANAGEMENT
-// ===================================================================
-
-/**
- * Finds all elements in the DOM that have the data-mos attribute
- * @returns Array of HTMLElements with data-mos attributes
- */
-function findMosElements(): HTMLElement[] {
-  return Array.from(document.querySelectorAll<HTMLElement>("[data-mos]"));
-}
-
-/**
- * Starts observing an element for scroll-based animations
- * Prevents duplicate observations using the observedElements set
- * @param element - The DOM element to observe
- * @param options - Animation options for this element
- */
-export function observeElementOnce(element: HTMLElement, options: ElementOptions): void {
-  // Skip if already observing this element
-  if (observedElements.has(element)) return;
-
-  // Skip if animations are disabled for this element
-  if (isDisabled(options.disable)) return;
-
-  // Mark as observed and start observing
-  observedElements.add(element);
-  startObservingElement(element, options);
-}
-
-/**
- * Processes all current MOS elements in the DOM
- * Resolves their options and starts observing them
- */
-export function processAllElements(): void {
-  MosElements.forEach((element) => {
-    const elementOptions = resolveElementOptions(element, libraryConfig);
-    observeElementOnce(element, elementOptions);
-  });
-}
 
 // ===================================================================
 // CONFIGURATION AND TIME UNITS
@@ -113,7 +62,7 @@ function adjustTimeUnitsOnFirstInit(config: MosOptions): void {
  */
 export function handleLayoutChange(): void {
   if (isLibraryActive) {
-    refreshElements();
+    evaluateElementPositions();
   }
 }
 
@@ -122,7 +71,7 @@ export function handleLayoutChange(): void {
  * Uses debounced handlers to prevent excessive recalculations
  */
 function setupLayoutChangeListeners(): void {
-  const debounceDelay = libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay;
+  const debounceDelay = libraryConfig.debounceDelay;
   const debouncedHandler = debounce(handleLayoutChange, debounceDelay);
 
   window.addEventListener("resize", debouncedHandler);
@@ -134,7 +83,7 @@ function setupLayoutChangeListeners(): void {
  * Handles both standard events (DOMContentLoaded, load) and custom events
  */
 export function setupStartEventListener(): void {
-  const startEvent = libraryConfig.startEvent ?? DEFAULT_OPTIONS.startEvent;
+  const startEvent = libraryConfig.startEvent;
 
   // If the desired event has already fired, bootstrap immediately
   if (
@@ -144,18 +93,11 @@ export function setupStartEventListener(): void {
   ) {
     refresh(true);
     return;
-  }
-
-  // Otherwise, attach listener for the start event
-  if (startEvent === "load") {
+  } else if (startEvent === "load") {
+    // Otherwise, attach listener for the start event
     window.addEventListener(startEvent, () => refresh(true), { once: true });
   } else {
     document.addEventListener(startEvent, () => refresh(true), { once: true });
-  }
-
-  // Don't start mutation observer if disabled or not supported
-  if (libraryConfig.disableMutationObserver || typeof MutationObserver === "undefined") {
-    return;
   }
 }
 
@@ -171,7 +113,7 @@ export function setupStartEventListener(): void {
  */
 function init(options: PartialMosOptions = {}): HTMLElement[] {
   // Merge new options with existing configuration
-  libraryConfig = { ...libraryConfig, ...options };
+  libraryConfig = { ...DEFAULT_OPTIONS, ...options };
 
   // Handle time unit conversion on first initialization
   adjustTimeUnitsOnFirstInit(libraryConfig);
@@ -179,25 +121,29 @@ function init(options: PartialMosOptions = {}): HTMLElement[] {
   // If already initialized, just refresh with new options
   if (isLibraryActive) {
     refresh();
-    return MosElements;
+    return getMosElements(); // Return current DOM elements
   }
 
-  // otherwise it is first time init - gather elements
-  MosElements = findMosElements();
+  // First time init - find elements and check for global disable
+  const foundElements = getMosElements();
 
   // Handle global disable - clean up and exit early
-  if (isDisabled(libraryConfig.disable ?? false)) {
-    MosElements.forEach(removeMosAttributes);
+  if (isDisabled(libraryConfig.disable)) {
+    foundElements.forEach(removeMosAttributes);
     return [];
   }
 
   // Set up event listeners
   setupStartEventListener();
   setupLayoutChangeListeners();
-  startDomObserver();
+
+  // Don't start mutation observer if disabled or not supported
+  if (!libraryConfig.disableMutationObserver && typeof MutationObserver !== "undefined") {
+    startDomObserver();
+  }
 
   // Return current elements
-  return MosElements;
+  return foundElements;
 }
 
 /**
@@ -209,16 +155,18 @@ function refresh(shouldActivate = false): void {
   if (shouldActivate) isLibraryActive = true;
   if (isLibraryActive) {
     // Configure performance settings from library config
-    updateScrollHandlerDelays(
-      libraryConfig.throttleDelay ?? DEFAULT_OPTIONS.throttleDelay,
-      libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
-    );
+    updateScrollHandlerDelays(libraryConfig.throttleDelay);
 
-    // Process all elements and start observing them
-    processAllElements();
+    const foundElements = getMosElements();
+
+    // Use unified element system to prepare elements (reusing previously found elements)
+    prepareElements(foundElements, libraryConfig);
+
+    // Ensure scroll handler is active to process all prepared elements
+    ensureScrollHandlerActive();
 
     // Calculate positions and set initial states for all elements
-    refreshElements();
+    evaluateElementPositions();
   }
 }
 
@@ -228,15 +176,16 @@ function refresh(shouldActivate = false): void {
  */
 function refreshHard(): void {
   // Re-find all MOS elements in case any were added or removed
-  MosElements = findMosElements();
+  const foundElements = getMosElements(true);
 
   // Handle global disable - clean up and exit early
-  if (isDisabled(libraryConfig.disable ?? false)) {
-    MosElements.forEach(removeMosAttributes);
+  if (isDisabled(libraryConfig.disable)) {
+    foundElements.forEach(removeMosAttributes);
     return;
   }
 
-  // Clean up existing scroll handlers
+  // Clear existing prepared elements and clean up scroll handlers
+  clearAllElements();
   cleanupScrollHandler();
 
   // re-calculate positions and init scroll system
@@ -257,3 +206,5 @@ export const MOS = {
 };
 
 export { init, refresh, refreshHard, registerAnimation, registerEasing, registerKeyframes };
+
+export default MOS;

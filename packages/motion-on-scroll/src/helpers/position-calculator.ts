@@ -89,8 +89,8 @@ export function isElementAboveViewport(el: HTMLElement): boolean {
 }
 
 export default {
-  isElementAboveViewport,
-  getPositionOut,
-  getPositionIn,
   getElementOffset,
+  getPositionIn,
+  getPositionOut,
+  isElementAboveViewport,
 };
