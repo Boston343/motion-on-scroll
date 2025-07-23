@@ -2,8 +2,7 @@
 // UNIFIED ELEMENT MANAGEMENT
 // ===================================================================
 // This module provides a single source of truth for all MOS elements,
-// replacing the fragmented tracking across index.ts, scroll-handler.ts,
-// and animations.ts. Based on the AOS prepare() pattern.
+// based on the AOS prepare() pattern.
 
 import { resolveElementOptions } from "./attributes.js";
 import { getPositionIn, getPositionOut } from "./position-calculator.js";
@@ -18,11 +17,6 @@ import type { MosElement, MosOptions } from "./types.js";
  * Contains both raw elements and their prepared data (positions, options, state)
  */
 let mosElements: MosElement[] = [];
-
-/**
- * Set of elements already being observed to prevent duplicate observations
- */
-const observedElements = new WeakSet<HTMLElement>();
 
 // ===================================================================
 // DOM ELEMENT DISCOVERY
@@ -122,20 +116,6 @@ export function findPreparedElement(element: HTMLElement): MosElement | undefine
  */
 export function updatePreparedElements(elements: MosElement[]): void {
   mosElements = elements;
-}
-
-/**
- * Checks if an element is already being observed
- */
-export function isElementObserved(element: HTMLElement): boolean {
-  return observedElements.has(element);
-}
-
-/**
- * Marks an element as observed
- */
-export function markElementObserved(element: HTMLElement): void {
-  observedElements.add(element);
 }
 
 /**

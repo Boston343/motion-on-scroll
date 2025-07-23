@@ -170,28 +170,6 @@ export function updateScrollHandlerDelays(throttleDelay: number, debounceDelay: 
 }
 
 // ===================================================================
-// ELEMENT OBSERVATION MANAGEMENT
-// ===================================================================
-
-/**
- * Adds an element to scroll-based animation tracking
- * If element is already being tracked, updates its options
- * @param element - The DOM element to observe
- * @param options - Animation configuration for this element
- */
-export function observeElement(element: HTMLElement, options: ElementOptions): void {
-  // Apply any custom delays from element options
-  updateScrollHandlerDelays(
-    options.throttleDelay ?? DEFAULT_OPTIONS.throttleDelay,
-    options.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
-  );
-
-  // Elements are now managed by the unified elements.ts system
-  // This function just ensures the scroll handler is active
-  ensureScrollHandlerActive();
-}
-
-// ===================================================================
 // SCROLL HANDLER LIFECYCLE
 // ===================================================================
 
@@ -199,7 +177,7 @@ export function observeElement(element: HTMLElement, options: ElementOptions): v
  * Initializes the scroll event handler system with throttling and debouncing
  * Sets up listeners for scroll, resize, and orientation change events
  */
-function ensureScrollHandlerActive(): void {
+export function ensureScrollHandlerActive(): void {
   // Prevent multiple initializations
   if (activeScrollHandler) return;
 
@@ -267,5 +245,5 @@ export function refreshElements(): void {
 
   // Process current scroll position to animate elements already in viewport
   processScrollEvent();
-  processScrollEvent();
+  // processScrollEvent();
 }

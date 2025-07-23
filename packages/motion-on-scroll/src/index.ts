@@ -7,22 +7,16 @@
 import { registerAnimation } from "./helpers/animations.js";
 import { DEFAULT_OPTIONS } from "./helpers/constants.js";
 import { registerEasing } from "./helpers/easing.js";
-import {
-  clearAllElements,
-  getMosElements,
-  isElementObserved,
-  markElementObserved,
-  prepareElements,
-} from "./helpers/elements.js";
+import { clearAllElements, getMosElements, prepareElements } from "./helpers/elements.js";
 import { registerKeyframes } from "./helpers/keyframes.js";
 import { startDomObserver } from "./helpers/observer.js";
 import {
   cleanupScrollHandler,
-  observeElement as startObservingElement,
+  ensureScrollHandlerActive,
   refreshElements,
   updateScrollHandlerDelays,
 } from "./helpers/scroll-handler.js";
-import type { ElementOptions, MosOptions, PartialMosOptions } from "./helpers/types.js";
+import type { MosOptions, PartialMosOptions } from "./helpers/types.js";
 import { debounce, isDisabled, removeMosAttributes } from "./helpers/utils.js";
 
 // ===================================================================
@@ -38,35 +32,6 @@ let libraryConfig: MosOptions = DEFAULT_OPTIONS;
  * Tracks whether the library has been initialized and is actively running
  */
 let isLibraryActive = false;
-
-// Element tracking is now handled by the unified elements.ts system
-// observedElements tracking is also handled there
-
-// ===================================================================
-// ELEMENT DISCOVERY AND MANAGEMENT
-// ===================================================================
-
-/**
- * Finds all elements in the DOM that have the data-mos attribute
- * @returns Array of HTMLElements with data-mos attributes
- */
-/**
- * Starts observing an element for scroll-based animations
- * Prevents duplicate observations using the observedElements set
- * @param element - The DOM element to observe
- * @param options - Animation options for this element
- */
-export function observeElementOnce(element: HTMLElement, options: ElementOptions): void {
-  // Skip if already observing this element
-  if (isElementObserved(element)) return;
-
-  // Skip if animations are disabled for this element
-  if (isDisabled(options.disable)) return;
-
-  // Mark as observed and start observing
-  markElementObserved(element);
-  startObservingElement(element, options);
-}
 
 // ===================================================================
 // CONFIGURATION AND TIME UNITS
@@ -106,7 +71,7 @@ export function handleLayoutChange(): void {
  * Uses debounced handlers to prevent excessive recalculations
  */
 function setupLayoutChangeListeners(): void {
-  const debounceDelay = libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay;
+  const debounceDelay = libraryConfig.debounceDelay;
   const debouncedHandler = debounce(handleLayoutChange, debounceDelay);
 
   window.addEventListener("resize", debouncedHandler);
@@ -118,7 +83,7 @@ function setupLayoutChangeListeners(): void {
  * Handles both standard events (DOMContentLoaded, load) and custom events
  */
 export function setupStartEventListener(): void {
-  const startEvent = libraryConfig.startEvent ?? DEFAULT_OPTIONS.startEvent;
+  const startEvent = libraryConfig.startEvent;
 
   // If the desired event has already fired, bootstrap immediately
   if (
@@ -148,7 +113,7 @@ export function setupStartEventListener(): void {
  */
 function init(options: PartialMosOptions = {}): HTMLElement[] {
   // Merge new options with existing configuration
-  libraryConfig = { ...libraryConfig, ...options };
+  libraryConfig = { ...DEFAULT_OPTIONS, ...options };
 
   // Handle time unit conversion on first initialization
   adjustTimeUnitsOnFirstInit(libraryConfig);
@@ -163,7 +128,7 @@ function init(options: PartialMosOptions = {}): HTMLElement[] {
   const foundElements = getMosElements();
 
   // Handle global disable - clean up and exit early
-  if (isDisabled(libraryConfig.disable ?? false)) {
+  if (isDisabled(libraryConfig.disable)) {
     foundElements.forEach(removeMosAttributes);
     return [];
   }
@@ -190,20 +155,15 @@ function refresh(shouldActivate = false): void {
   if (shouldActivate) isLibraryActive = true;
   if (isLibraryActive) {
     // Configure performance settings from library config
-    updateScrollHandlerDelays(
-      libraryConfig.throttleDelay ?? DEFAULT_OPTIONS.throttleDelay,
-      libraryConfig.debounceDelay ?? DEFAULT_OPTIONS.debounceDelay,
-    );
+    updateScrollHandlerDelays(libraryConfig.throttleDelay, libraryConfig.debounceDelay);
 
     const foundElements = getMosElements();
 
     // Use unified element system to prepare elements (reusing found elements)
-    const preparedElements = prepareElements(foundElements, libraryConfig);
+    prepareElements(foundElements, libraryConfig);
 
-    // Start observing each prepared element
-    preparedElements.forEach((mosElement) => {
-      observeElementOnce(mosElement.element, mosElement.options);
-    });
+    // Ensure scroll handler is active to process all prepared elements
+    ensureScrollHandlerActive();
 
     // Calculate positions and set initial states for all elements
     refreshElements();
@@ -219,7 +179,7 @@ function refreshHard(): void {
   const foundElements = getMosElements(true);
 
   // Handle global disable - clean up and exit early
-  if (isDisabled(libraryConfig.disable ?? false)) {
+  if (isDisabled(libraryConfig.disable)) {
     foundElements.forEach(removeMosAttributes);
     return;
   }
