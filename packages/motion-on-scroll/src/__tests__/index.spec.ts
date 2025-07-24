@@ -531,5 +531,61 @@ describe("index.ts - Main Entry Point", () => {
 
       expect(getMosElements).toHaveBeenCalled();
     });
+
+    it("should convert default duration and delay when timeUnits is 's' and no explicit values provided", () => {
+      // Mock isDisabled to return false so init completes
+      vi.mocked(isDisabled).mockReturnValue(false);
+      
+      // Mock prepareElements to capture the config that gets passed
+      let capturedConfig: any;
+      vi.mocked(prepareElements).mockImplementation((elements, config) => {
+        capturedConfig = config;
+        return []; // Return empty array to match MosElement[] return type
+      });
+      
+      // Call init with timeUnits: "s" but no explicit duration or delay
+      init({ timeUnits: "s" });
+      
+      // Trigger refresh to ensure prepareElements gets called with the config
+      refresh(true);
+      
+      // Verify that the config passed to prepareElements has converted defaults
+      expect(capturedConfig).toBeDefined();
+      expect(capturedConfig.timeUnits).toBe("s");
+      
+      // Default duration should be converted: 400ms -> 0.4s
+      expect(capturedConfig.duration).toBe(0.4);
+      
+      // Default delay should be converted: 0ms -> 0s
+      expect(capturedConfig.delay).toBe(0);
+    });
+
+    it("should not convert defaults when explicit duration and delay are provided with timeUnits 's'", () => {
+      // Mock isDisabled to return false so init completes
+      vi.mocked(isDisabled).mockReturnValue(false);
+      
+      // Mock prepareElements to capture the config that gets passed
+      let capturedConfig: any;
+      vi.mocked(prepareElements).mockImplementation((elements, config) => {
+        capturedConfig = config;
+        return []; // Return empty array to match MosElement[] return type
+      });
+      
+      // Call init with timeUnits: "s" AND explicit duration/delay
+      init({ 
+        timeUnits: "s",
+        duration: 1.5,  // Explicit value should not be converted
+        delay: 0.2      // Explicit value should not be converted
+      });
+      
+      // Trigger refresh to ensure prepareElements gets called with the config
+      refresh(true);
+      
+      // Verify that the explicit values are preserved (not converted)
+      expect(capturedConfig).toBeDefined();
+      expect(capturedConfig.timeUnits).toBe("s");
+      expect(capturedConfig.duration).toBe(1.5);  // Should remain as provided
+      expect(capturedConfig.delay).toBe(0.2);     // Should remain as provided
+    });
   });
 });
