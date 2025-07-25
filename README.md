@@ -4,7 +4,7 @@
 
 Looking for the main package? Go to [motion-on-scroll](/packages/motion-on-scroll/).
 
-## Note: this is currently in beta - there are still various items to be ironed out. Feel free to try it though :)
+## Note: this is currently in beta. Feel free to try it though :)
 
 Effortless, AOS-compatible scroll animations powered by [Motion](https://motion.dev).
 
