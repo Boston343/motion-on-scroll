@@ -76,7 +76,7 @@ importers:
         specifier: ^12.23.6
         version: 12.23.9
       motion-on-scroll:
-        specifier: ^0.0.6
+        specifier: ^1.0.0
         version: link:../../packages/motion-on-scroll
       sharp:
         specifier: ^0.34.2
