@@ -1,5 +1,11 @@
 # motion-on-scroll
 
+## 1.0.0
+
+### Major Changes
+
+- c07435b: v1.0.0 release - now out of beta! Full documentation on the features and functionality can be found at [motion-on-scroll.pages.dev](https://motion-on-scroll.pages.dev/).
+
 ## 0.0.6
 
 ### Patch Changes
