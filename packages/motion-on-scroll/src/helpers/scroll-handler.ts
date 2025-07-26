@@ -131,11 +131,17 @@ function setElementInitialState(elementData: MosElement): void {
 /**
  * Refreshes all tracked elements by recalculating positions and states
  * Called when the library needs to update after configuration changes
+ * Preserves current animation states to prevent flicker during resize
  */
 export function evaluateElementPositions(): void {
   getPreparedElements().forEach((elementData) => {
     calculateElementTriggerPositions(elementData);
-    setElementInitialState(elementData);
+
+    // Only reset initial state for elements that haven't been animated yet
+    // This prevents flicker during resize for already-animated elements
+    if (!elementData.animated) {
+      setElementInitialState(elementData);
+    }
   });
 
   // Process current scroll position to animate elements already in viewport

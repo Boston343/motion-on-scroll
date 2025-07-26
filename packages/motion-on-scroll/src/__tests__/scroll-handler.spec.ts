@@ -287,6 +287,37 @@ describe("scroll-handler.ts", () => {
       // Should trigger play since scrollY (150) >= position.in (100)
       expect(play).toHaveBeenCalledWith(mockMosElement1);
     });
+
+    it("should preserve animated element states during resize (flicker fix)", () => {
+      // Setup: Create elements with different animation states
+      const animatedElement = {
+        ...mockMosElement1,
+        animated: true, // Already animated
+      };
+      const nonAnimatedElement = {
+        ...mockMosElement2,
+        animated: false, // Not yet animated
+      };
+
+      vi.mocked(getPreparedElements).mockReturnValue([animatedElement, nonAnimatedElement]);
+      vi.mocked(isElementAboveViewport).mockReturnValue(false);
+
+      evaluateElementPositions();
+
+      // Should recalculate positions for both elements
+      expect(getPositionIn).toHaveBeenCalledWith(animatedElement.element, animatedElement.options);
+      expect(getPositionIn).toHaveBeenCalledWith(
+        nonAnimatedElement.element,
+        nonAnimatedElement.options,
+      );
+
+      // Should NOT reset initial state for already-animated element (prevents flicker)
+      expect(setInitialState).not.toHaveBeenCalledWith(animatedElement);
+      expect(setFinalState).not.toHaveBeenCalledWith(animatedElement);
+
+      // Should still set initial state for non-animated element
+      expect(setInitialState).toHaveBeenCalledWith(nonAnimatedElement);
+    });
   });
 
   describe("scroll event processing", () => {

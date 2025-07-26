@@ -42,16 +42,16 @@ let isLibraryActive = false;
  * Only applied on first initialization when timeUnits is set to "s"
  * @param config - The configuration object to potentially modify
  */
-function adjustTimeUnitsOnFirstInit(config: MosOptions): void {
+function adjustTimeUnitsOnFirstInit(config: MosOptions, newOptions: PartialMosOptions): void {
   if (isLibraryActive || config.timeUnits !== "s") return;
 
   // Convert default duration from ms to seconds if not explicitly set
-  if (config.duration == null) {
+  if (newOptions.duration == null) {
     config.duration = DEFAULT_OPTIONS.duration / 1000;
   }
 
   // Convert default delay from ms to seconds if not explicitly set
-  if (config.delay == null) {
+  if (newOptions.delay == null) {
     config.delay = DEFAULT_OPTIONS.delay / 1000;
   }
 }
@@ -116,7 +116,7 @@ function init(options: PartialMosOptions = {}): HTMLElement[] {
   libraryConfig = { ...DEFAULT_OPTIONS, ...options };
 
   // Handle time unit conversion on first initialization
-  adjustTimeUnitsOnFirstInit(libraryConfig);
+  adjustTimeUnitsOnFirstInit(libraryConfig, options);
 
   // If already initialized, just refresh with new options
   if (isLibraryActive) {
