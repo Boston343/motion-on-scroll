@@ -1,5 +1,12 @@
 # motion-on-scroll
 
+## 0.0.6
+
+### Patch Changes
+
+- 083a02c: Fix potential element flash on page resize. Also add additional tests for verification.
+- ae9e4c5: Fix setting units in init function when not explicitly setting duration and delay. Also add additional tests for verification.
+
 ## 0.0.5
 
 ### Patch Changes
