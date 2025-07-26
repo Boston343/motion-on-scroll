@@ -298,7 +298,7 @@ describe("scroll-handler.ts", () => {
         ...mockMosElement2,
         animated: false, // Not yet animated
       };
-      
+
       vi.mocked(getPreparedElements).mockReturnValue([animatedElement, nonAnimatedElement]);
       vi.mocked(isElementAboveViewport).mockReturnValue(false);
 
@@ -306,7 +306,10 @@ describe("scroll-handler.ts", () => {
 
       // Should recalculate positions for both elements
       expect(getPositionIn).toHaveBeenCalledWith(animatedElement.element, animatedElement.options);
-      expect(getPositionIn).toHaveBeenCalledWith(nonAnimatedElement.element, nonAnimatedElement.options);
+      expect(getPositionIn).toHaveBeenCalledWith(
+        nonAnimatedElement.element,
+        nonAnimatedElement.options,
+      );
 
       // Should NOT reset initial state for already-animated element (prevents flicker)
       expect(setInitialState).not.toHaveBeenCalledWith(animatedElement);

@@ -136,7 +136,7 @@ function setElementInitialState(elementData: MosElement): void {
 export function evaluateElementPositions(): void {
   getPreparedElements().forEach((elementData) => {
     calculateElementTriggerPositions(elementData);
-    
+
     // Only reset initial state for elements that haven't been animated yet
     // This prevents flicker during resize for already-animated elements
     if (!elementData.animated) {

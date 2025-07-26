@@ -41,11 +41,7 @@ vi.mock("../helpers/utils.js", () => ({
 // Import mocked functions
 import { registerAnimation } from "../helpers/animations.js";
 import { registerEasing } from "../helpers/easing.js";
-import {
-  clearAllElements,
-  getMosElements,
-  prepareElements,
-} from "../helpers/elements.js";
+import { clearAllElements, getMosElements, prepareElements } from "../helpers/elements.js";
 import { registerKeyframes } from "../helpers/keyframes.js";
 import { startDomObserver } from "../helpers/observer.js";
 import {
@@ -83,16 +79,16 @@ describe("index.ts - Main Entry Point", () => {
     vi.mocked(getMosElements).mockReturnValue([mockElement1, mockElement2]);
 
     // Mock document.readyState since it's read-only
-    Object.defineProperty(document, 'readyState', {
+    Object.defineProperty(document, "readyState", {
       writable: true,
-      value: 'loading'
+      value: "loading",
     });
 
     // Mock global MutationObserver
     global.MutationObserver = vi.fn(() => ({
       observe: vi.fn(),
       disconnect: vi.fn(),
-      takeRecords: vi.fn()
+      takeRecords: vi.fn(),
     })) as any;
 
     // Reset modules and re-import to get fresh state
@@ -161,15 +157,21 @@ describe("index.ts - Main Entry Point", () => {
       const result = init();
 
       // removeMosAttributes is called with forEach, so it gets (element, index, array)
-      expect(removeMosAttributes).toHaveBeenCalledWith(mockElement1, 0, [mockElement1, mockElement2]);
-      expect(removeMosAttributes).toHaveBeenCalledWith(mockElement2, 1, [mockElement1, mockElement2]);
+      expect(removeMosAttributes).toHaveBeenCalledWith(mockElement1, 0, [
+        mockElement1,
+        mockElement2,
+      ]);
+      expect(removeMosAttributes).toHaveBeenCalledWith(mockElement2, 1, [
+        mockElement1,
+        mockElement2,
+      ]);
       expect(result).toEqual([]);
     });
 
     it("should start DOM observer when not disabled and MutationObserver exists", () => {
       // Mock isDisabled to return false so we don't exit early
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       init({ disableMutationObserver: false });
 
       expect(startDomObserver).toHaveBeenCalled();
@@ -189,7 +191,7 @@ describe("index.ts - Main Entry Point", () => {
       init();
 
       expect(startDomObserver).not.toHaveBeenCalled();
-      
+
       // Restore MutationObserver
       global.MutationObserver = originalMutationObserver;
     });
@@ -197,7 +199,7 @@ describe("index.ts - Main Entry Point", () => {
     it("should refresh when called multiple times", () => {
       // Mock isDisabled to return false
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       // First init
       init();
       expect(getMosElements).toHaveBeenCalledTimes(1);
@@ -232,7 +234,7 @@ describe("index.ts - Main Entry Point", () => {
     it("should update scroll handler delays with library config", () => {
       // Mock isDisabled to return false
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       // First init to set library as active
       init({ throttleDelay: 150 });
 
@@ -244,19 +246,19 @@ describe("index.ts - Main Entry Point", () => {
 
     it("should prepare elements with current library config", () => {
       const customOptions = { duration: 800, delay: 200 };
-      
+
       // Mock isDisabled to return false
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       // Init with custom options to set library config
       init(customOptions);
-      
+
       // Call refresh with shouldActivate=true to ensure library is active
       refresh(true);
 
       expect(prepareElements).toHaveBeenCalledWith(
         [mockElement1, mockElement2],
-        expect.objectContaining(customOptions)
+        expect.objectContaining(customOptions),
       );
     });
   });
@@ -265,7 +267,7 @@ describe("index.ts - Main Entry Point", () => {
     it("should re-find elements and clear existing state", () => {
       // Mock isDisabled to return false
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       // Set up library as active first
       init();
 
@@ -282,9 +284,15 @@ describe("index.ts - Main Entry Point", () => {
       refreshHard();
 
       // removeMosAttributes is called with forEach, so it gets (element, index, array)
-      expect(removeMosAttributes).toHaveBeenCalledWith(mockElement1, 0, [mockElement1, mockElement2]);
-      expect(removeMosAttributes).toHaveBeenCalledWith(mockElement2, 1, [mockElement1, mockElement2]);
-      
+      expect(removeMosAttributes).toHaveBeenCalledWith(mockElement1, 0, [
+        mockElement1,
+        mockElement2,
+      ]);
+      expect(removeMosAttributes).toHaveBeenCalledWith(mockElement2, 1, [
+        mockElement1,
+        mockElement2,
+      ]);
+
       // When disabled, function returns early - cleanup functions are NOT called
       expect(clearAllElements).not.toHaveBeenCalled();
       expect(cleanupScrollHandler).not.toHaveBeenCalled();
@@ -293,12 +301,12 @@ describe("index.ts - Main Entry Point", () => {
     it("should call refresh after cleanup when not disabled", () => {
       // Mock isDisabled to return false
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       refreshHard();
 
       expect(clearAllElements).toHaveBeenCalled();
       expect(cleanupScrollHandler).toHaveBeenCalled();
-      
+
       // refresh() is called, but updateScrollHandlerDelays only happens if library is active
       // Since we haven't activated the library, updateScrollHandlerDelays won't be called
       expect(getMosElements).toHaveBeenCalled(); // This should be called by refresh
@@ -309,7 +317,7 @@ describe("index.ts - Main Entry Point", () => {
     it("should evaluate element positions when library is active", () => {
       // Mock isDisabled to return false
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       // Activate library first
       init();
       refresh(true);
@@ -334,78 +342,94 @@ describe("index.ts - Main Entry Point", () => {
     });
 
     it("should call refresh immediately when DOMContentLoaded already fired", async () => {
-      Object.defineProperty(document, 'readyState', {
+      Object.defineProperty(document, "readyState", {
         writable: true,
-        value: 'interactive'
+        value: "interactive",
       });
-      
+
       // Re-import to get fresh module state with new readyState
       vi.resetModules();
       const { setupStartEventListener } = await import("../index.js");
-      
+
       setupStartEventListener();
 
       // Should not add event listener since DOM is already ready
-      expect(document.addEventListener).not.toHaveBeenCalledWith("DOMContentLoaded", expect.any(Function), expect.any(Object));
+      expect(document.addEventListener).not.toHaveBeenCalledWith(
+        "DOMContentLoaded",
+        expect.any(Function),
+        expect.any(Object),
+      );
     });
 
     it("should call refresh immediately when load already fired", async () => {
-      Object.defineProperty(document, 'readyState', {
+      Object.defineProperty(document, "readyState", {
         writable: true,
-        value: 'complete'
+        value: "complete",
       });
-      
+
       vi.resetModules();
       const { setupStartEventListener } = await import("../index.js");
-      
+
       setupStartEventListener();
 
       // Should not add event listener since page is already loaded
-      expect(window.addEventListener).not.toHaveBeenCalledWith("load", expect.any(Function), expect.any(Object));
+      expect(window.addEventListener).not.toHaveBeenCalledWith(
+        "load",
+        expect.any(Function),
+        expect.any(Object),
+      );
     });
 
     it("should add window event listener for load event", () => {
-      Object.defineProperty(document, 'readyState', {
+      Object.defineProperty(document, "readyState", {
         writable: true,
-        value: 'loading'
+        value: "loading",
       });
-      
+
       // Mock isDisabled to return false
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       // Initialize with load event
       init({ startEvent: "load" });
-      
-      expect(window.addEventListener).toHaveBeenCalledWith("load", expect.any(Function), { once: true });
+
+      expect(window.addEventListener).toHaveBeenCalledWith("load", expect.any(Function), {
+        once: true,
+      });
     });
 
     it("should add document event listener for DOMContentLoaded", () => {
-      Object.defineProperty(document, 'readyState', {
+      Object.defineProperty(document, "readyState", {
         writable: true,
-        value: 'loading'
+        value: "loading",
       });
-      
+
       // Mock isDisabled to return false
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       // Initialize with DOMContentLoaded (default)
       init({ startEvent: "DOMContentLoaded" });
-      
-      expect(document.addEventListener).toHaveBeenCalledWith("DOMContentLoaded", expect.any(Function), { once: true });
+
+      expect(document.addEventListener).toHaveBeenCalledWith(
+        "DOMContentLoaded",
+        expect.any(Function),
+        { once: true },
+      );
     });
 
     it("should add document event listener for custom events", () => {
-      Object.defineProperty(document, 'readyState', {
+      Object.defineProperty(document, "readyState", {
         writable: true,
-        value: 'loading'
+        value: "loading",
       });
-      
+
       // Mock isDisabled to return false
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       init({ startEvent: "custom-event" });
-      
-      expect(document.addEventListener).toHaveBeenCalledWith("custom-event", expect.any(Function), { once: true });
+
+      expect(document.addEventListener).toHaveBeenCalledWith("custom-event", expect.any(Function), {
+        once: true,
+      });
     });
   });
 
@@ -417,19 +441,22 @@ describe("index.ts - Main Entry Point", () => {
     it("should set up resize and orientation change listeners", () => {
       // Mock isDisabled to return false
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       init();
 
       expect(window.addEventListener).toHaveBeenCalledWith("resize", expect.any(Function));
-      expect(window.addEventListener).toHaveBeenCalledWith("orientationchange", expect.any(Function));
+      expect(window.addEventListener).toHaveBeenCalledWith(
+        "orientationchange",
+        expect.any(Function),
+      );
     });
 
     it("should use debounced handler with configured delay", () => {
       const customDebounceDelay = 200;
-      
+
       // Mock isDisabled to return false
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       init({ debounceDelay: customDebounceDelay });
 
       expect(debounce).toHaveBeenCalledWith(expect.any(Function), customDebounceDelay);
@@ -439,17 +466,17 @@ describe("index.ts - Main Entry Point", () => {
   describe("Registration functions", () => {
     it("should expose registerKeyframes function", () => {
       const mockKeyframes = { "custom-fade": { from: { opacity: 0 }, to: { opacity: 1 } } };
-      
+
       MOS.registerKeyframes(mockKeyframes);
-      
+
       expect(registerKeyframes).toHaveBeenCalledWith(mockKeyframes);
     });
 
     it("should expose registerEasing function", () => {
       const mockEasing = { "custom-ease": "cubic-bezier(0.25, 0.46, 0.45, 0.94)" };
-      
+
       MOS.registerEasing(mockEasing);
-      
+
       expect(registerEasing).toHaveBeenCalledWith(mockEasing);
     });
 
@@ -458,9 +485,9 @@ describe("index.ts - Main Entry Point", () => {
         name: "custom-animation",
         factory: () => ({ opacity: [0, 1] }),
       };
-      
+
       MOS.registerAnimation(mockAnimation);
-      
+
       expect(registerAnimation).toHaveBeenCalledWith(mockAnimation);
     });
   });
@@ -503,7 +530,7 @@ describe("index.ts - Main Entry Point", () => {
     it("should not convert on subsequent inits", () => {
       // First init with seconds
       init({ timeUnits: "s" });
-      
+
       // Second init should not trigger conversion again
       init({ timeUnits: "s" });
 
@@ -535,27 +562,27 @@ describe("index.ts - Main Entry Point", () => {
     it("should convert default duration and delay when timeUnits is 's' and no explicit values provided", () => {
       // Mock isDisabled to return false so init completes
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       // Mock prepareElements to capture the config that gets passed
       let capturedConfig: any;
       vi.mocked(prepareElements).mockImplementation((elements, config) => {
         capturedConfig = config;
         return []; // Return empty array to match MosElement[] return type
       });
-      
+
       // Call init with timeUnits: "s" but no explicit duration or delay
       init({ timeUnits: "s" });
-      
+
       // Trigger refresh to ensure prepareElements gets called with the config
       refresh(true);
-      
+
       // Verify that the config passed to prepareElements has converted defaults
       expect(capturedConfig).toBeDefined();
       expect(capturedConfig.timeUnits).toBe("s");
-      
+
       // Default duration should be converted: 400ms -> 0.4s
       expect(capturedConfig.duration).toBe(0.4);
-      
+
       // Default delay should be converted: 0ms -> 0s
       expect(capturedConfig.delay).toBe(0);
     });
@@ -563,29 +590,29 @@ describe("index.ts - Main Entry Point", () => {
     it("should not convert defaults when explicit duration and delay are provided with timeUnits 's'", () => {
       // Mock isDisabled to return false so init completes
       vi.mocked(isDisabled).mockReturnValue(false);
-      
+
       // Mock prepareElements to capture the config that gets passed
       let capturedConfig: any;
       vi.mocked(prepareElements).mockImplementation((elements, config) => {
         capturedConfig = config;
         return []; // Return empty array to match MosElement[] return type
       });
-      
+
       // Call init with timeUnits: "s" AND explicit duration/delay
-      init({ 
+      init({
         timeUnits: "s",
-        duration: 1.5,  // Explicit value should not be converted
-        delay: 0.2      // Explicit value should not be converted
+        duration: 1.5, // Explicit value should not be converted
+        delay: 0.2, // Explicit value should not be converted
       });
-      
+
       // Trigger refresh to ensure prepareElements gets called with the config
       refresh(true);
-      
+
       // Verify that the explicit values are preserved (not converted)
       expect(capturedConfig).toBeDefined();
       expect(capturedConfig.timeUnits).toBe("s");
-      expect(capturedConfig.duration).toBe(1.5);  // Should remain as provided
-      expect(capturedConfig.delay).toBe(0.2);     // Should remain as provided
+      expect(capturedConfig.duration).toBe(1.5); // Should remain as provided
+      expect(capturedConfig.delay).toBe(0.2); // Should remain as provided
     });
   });
 });
