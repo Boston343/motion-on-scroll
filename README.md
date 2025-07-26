@@ -4,8 +4,6 @@
 
 Looking for the main package? Go to [motion-on-scroll](/packages/motion-on-scroll/).
 
-## Note: this is currently in beta. Feel free to try it though :)
-
 Effortless, AOS-compatible scroll animations powered by [Motion](https://motion.dev).
 
 Framework-agnostic, MOS lets you add scroll-triggered animations with nothing but `data-mos` attributes. Under the hood it uses Motion’s powerful `animate` API, giving you:
