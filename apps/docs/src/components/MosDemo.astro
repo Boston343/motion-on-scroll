@@ -1,4 +1,45 @@
 ---
+import { Code } from "@astrojs/starlight/components";
+
+// Code examples for custom animations
+const keyframesCode = `MOS.registerKeyframes("my-custom-keyframes", {
+  opacity: [0, 1],
+  rotate: [0, 360],
+});`;
+
+const keyframesHtml = `<div data-mos="my-custom-keyframes">
+  my-custom-keyframes
+</div>`;
+
+const animationCode = `MOS.registerAnimation("bouncy", (el, opts) =>
+  animate(
+    el,
+    { opacity: [0, 1], scale: [0.4, 1] },
+    {
+      type: "spring",
+      bounce: 0.5,
+      duration: opts.timeUnits === "s" ? opts.duration : opts.duration / 1000,
+      delay: opts.timeUnits === "s" ? opts.delay : opts.delay / 1000,
+    },
+  ),
+);`;
+
+const animationHtml = `<div data-mos="bouncy">
+  bouncy animation
+</div>`;
+
+const bouncyEasingCode = `MOS.registerEasing("bouncy", [0.68, -0.55, 0.265, 1.55]);`;
+
+const bouncyEasingHtml = `<div data-mos="fade-up" data-mos-easing="bouncy">
+  fade-up w/ bouncy easing
+</div>`;
+
+const dramaticEasingCode = `MOS.registerEasing("dramatic", "cubic-bezier(0.25, 0.46, 0.45, 0.94)");`;
+
+const dramaticEasingHtml = `<div data-mos="fade-up" data-mos-easing="dramatic">
+  fade-up w/ dramatic easing
+</div>`;
+
 const animationSections = [
   {
     title: "Fade Animations",
@@ -67,10 +108,10 @@ const animationSections = [
                       }`}
                     >
                       <div
-                        class={`bg-gradient-to-br ${section.colorClasses} min-w-[200px] rounded-xl px-8 py-10 text-center font-semibold text-white shadow-xl`}
+                        class={`bg-gradient-to-br ${section.colorClasses} min-w-[200px] rounded-xl px-8 py-10 text-center text-sm font-medium text-white shadow-xl`}
                         data-mos={animation}
                       >
-                        {animation}
+                        data-mos="{animation}"
                       </div>
                     </div>
                   );
@@ -82,7 +123,7 @@ const animationSections = [
       }
 
       <!-- Custom Animations Demo -->
-      <div class="space-y-8">
+      <div class="space-y-16">
         <h2
           class="text-center text-3xl font-semibold text-gray-800 md:col-span-2 dark:text-gray-200"
         >
@@ -91,43 +132,83 @@ const animationSections = [
 
         <div class="space-y-20">
           <!-- Custom Keyframes Example -->
-          <div class="flex justify-start md:justify-start">
-            <div
-              class="min-w-[200px] rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-yellow-400 dark:to-orange-500"
-              data-mos="my-custom-keyframes"
-            >
-              my-custom-keyframes
+          <div class="grid gap-16 md:grid-cols-2 md:items-center md:gap-8">
+            <div class="order-2 min-w-0 space-y-4">
+              <div class="overflow-hidden">
+                <Code code={keyframesCode} lang="js" title="JavaScript" />
+              </div>
+              <div class="overflow-hidden">
+                <Code code={keyframesHtml} lang="html" title="HTML" />
+              </div>
+            </div>
+            <div class="order-1 flex justify-center md:justify-start">
+              <div
+                class="min-w-[200px] rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-yellow-400 dark:to-orange-500"
+                data-mos="my-custom-keyframes"
+              >
+                my-custom-keyframes
+              </div>
             </div>
           </div>
 
           <!-- Custom Animation Example -->
-          <div class="flex justify-end md:justify-end">
-            <div
-              class="min-w-[200px] rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-rose-400 dark:to-pink-500"
-              data-mos="bouncy"
-            >
-              bouncy animation
+          <div class="grid gap-8 md:grid-cols-2 md:items-center">
+            <div class="flex justify-center md:order-2 md:justify-end">
+              <div
+                class="min-w-[200px] rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-rose-400 dark:to-pink-500"
+                data-mos="bouncy"
+              >
+                bouncy animation
+              </div>
+            </div>
+            <div class="min-w-0 space-y-4">
+              <div class="overflow-hidden">
+                <Code code={animationCode} lang="js" title="JavaScript" />
+              </div>
+              <div class="overflow-hidden">
+                <Code code={animationHtml} lang="html" title="HTML" />
+              </div>
             </div>
           </div>
 
           <!-- Custom Easing Examples -->
-          <div class="flex justify-start md:justify-start">
-            <div
-              class="min-w-[200px] rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-teal-400 dark:to-cyan-500"
-              data-mos="fade-up"
-              data-mos-easing="bouncy"
-            >
-              fade-up w/ bouncy easing
+          <div class="grid gap-8 md:grid-cols-2 md:items-center">
+            <div class="order-2 min-w-0 space-y-4">
+              <div class="overflow-hidden">
+                <Code code={bouncyEasingCode} lang="js" title="JavaScript" />
+              </div>
+              <div class="overflow-hidden">
+                <Code code={bouncyEasingHtml} lang="html" title="HTML" />
+              </div>
+            </div>
+            <div class="order-1 flex justify-center md:justify-start">
+              <div
+                class="min-w-[200px] rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-teal-400 dark:to-cyan-500"
+                data-mos="fade-up"
+                data-mos-easing="bouncy"
+              >
+                fade-up w/ bouncy easing
+              </div>
             </div>
           </div>
 
-          <div class="flex justify-end md:justify-end">
-            <div
-              class="min-w-[200px] rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-violet-400 dark:to-purple-500"
-              data-mos="fade-up"
-              data-mos-easing="dramatic"
-            >
-              fade-up w/ dramatic easing
+          <div class="grid gap-8 md:grid-cols-2 md:items-center">
+            <div class="flex justify-center md:order-2 md:justify-end">
+              <div
+                class="min-w-[200px] rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 px-8 py-10 text-center font-semibold text-white shadow-xl dark:from-violet-400 dark:to-purple-500"
+                data-mos="fade-up"
+                data-mos-easing="dramatic"
+              >
+                fade-up w/ dramatic easing
+              </div>
+            </div>
+            <div class="min-w-0 space-y-4">
+              <div class="overflow-hidden">
+                <Code code={dramaticEasingCode} lang="js" title="JavaScript" />
+              </div>
+              <div class="overflow-hidden">
+                <Code code={dramaticEasingHtml} lang="html" title="HTML" />
+              </div>
             </div>
           </div>
         </div>
