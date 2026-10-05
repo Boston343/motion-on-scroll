@@ -16,18 +16,27 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
+      # pnpm must be installed before setup-node so `cache: pnpm` can find the store
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install
 
+      - name: Typecheck
+        run: pnpm typecheck
+
       - name: Run CI
         run: pnpm run ci
+
+      # the library is already built by the step above
+      - name: Build docs
+        run: pnpm docs:build
