@@ -19,7 +19,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.5",
     "motion": "^14.0.0",
-    "motion-on-scroll": "^1.0.0",
+    "motion-on-scroll": "workspace:*",
     "sharp": "^0.35.5",
     "starlight-llms-txt": "^0.12.0",
     "tailwindcss": "^4.3.3"
