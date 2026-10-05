@@ -5,7 +5,7 @@
 // Motion-on-Scroll elements. It handles both built-in animations
 // and custom user-registered animations.
 
-import { animate, type AnimationPlaybackControls, type KeyframeOptions } from "motion";
+import { animate, type AnimationPlaybackControls } from "motion";
 
 import { DEFAULT_OPTIONS } from "./constants.js";
 import { resolveEasing } from "./easing.js";
@@ -28,16 +28,38 @@ export type AnimationFactory = (el: HTMLElement, opts: ElementOptions) => Animat
 // ===================================================================
 
 /**
- * Maps elements to their currently running animation controls
- * Used to track which elements are actively animating
- */
-const activeAnimations = new WeakMap<HTMLElement, AnimationPlaybackControls>();
-
-/**
  * Registry of custom animations registered by users
  * Maps animation names to their factory functions
  */
 const customAnimationRegistry: Record<string, AnimationFactory> = {};
+
+/**
+ * Timers of elements that are waiting out their delay before animating in
+ * Keyed by DOM element, because element records are re-created on every refresh
+ */
+const pendingShows = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
+
+/**
+ * Cancels a pending delayed show for an element
+ * @returns Whether there was one to cancel
+ */
+export function cancelPendingShow(mosElement: MosElement): boolean {
+  const timer = pendingShows.get(mosElement.element);
+  if (timer === undefined) return false;
+
+  clearTimeout(timer);
+  pendingShows.delete(mosElement.element);
+  return true;
+}
+
+/**
+ * The show delay of an element in ms
+ * Custom animations receive the delay in their options and handle it themselves
+ */
+function getShowDelay(options: ElementOptions): number {
+  if (customAnimationRegistry[options.keyframes]) return 0;
+  return options.timeUnits === "s" ? options.delay * 1000 : options.delay;
+}
 
 // ===================================================================
 // CUSTOM ANIMATION REGISTRATION
@@ -109,13 +131,15 @@ function ensureAnimationControls(
  * Creates animation controls but preserves natural position for accurate scroll calculations
  * CSS handles initial visibility (opacity: 0, visibility: hidden, etc.)
  *
+ * Only acts the first time it is called for an element. Once controls exist the
+ * element is either waiting at its start or animating out, and must be left alone.
+ *
  * @param mosElement - The MOS element data containing element, options, and state
  */
 export function setInitialState(mosElement: MosElement): void {
-  const { element, options } = mosElement;
+  if (mosElement.controls) return;
 
-  // Skip if element is currently animating
-  if (activeAnimations.has(element)) return;
+  const { element, options } = mosElement;
 
   const controls = ensureAnimationControls(element, options);
   if (!controls) return;
@@ -123,87 +147,62 @@ export function setInitialState(mosElement: MosElement): void {
   // Pause controls without setting time to preserve natural element position
   // This is crucial for accurate scroll position calculations
   controls.pause();
+  releaseIdleFrameLoop(controls);
 
-  // Update element state
   mosElement.animated = false;
-  mosElement.isReversing = false;
 }
 
 /**
- * Sets up a single completion handler for animation controls
- * Uses element state to determine whether to handle forward or reverse completion
+ * Stops the frame loop of a paused animation once its first frame is on screen
  *
- * @param element - The DOM element being animated
- * @param controls - The animation controls to set up handler for
- * @param options - Animation configuration options
+ * Motion keeps a requestAnimationFrame loop running for every paused JS-driven
+ * (transform) animation, so a page full of elements waiting below the fold would
+ * tick 60 times a second for nothing. Motion has no public way to park a paused
+ * animation, so this reaches for its internal `stopDriver()`; if that ever goes
+ * away this silently does nothing and the animations simply keep ticking as before.
+ * Motion starts a fresh loop by itself on the next play().
  */
-function setupAnimationCompletionHandler(
-  element: HTMLElement,
-  controls: AnimationPlaybackControls,
-  options: ElementOptions,
-): void {
-  controls.finished
-    .then(() => {
-      const mosElement = findPreparedElement(element);
-      if (!mosElement) return;
+function releaseIdleFrameLoop(controls: AnimationPlaybackControls): void {
+  type Parkable = { state?: string; stopDriver?: () => void };
+  type Wrapper = { animation?: Parkable };
 
-      if (mosElement.isReversing) {
-        handleReverseAnimationCompletion(element, controls, mosElement);
-      } else {
-        handleForwardAnimationCompletion(element, controls, options);
-      }
-    })
-    .catch(() => {
-      handleAnimationInterruption(element);
-    });
+  // animate() returns a group of per-value animations, each wrapping the real one
+  const group = (controls as { animations?: Wrapper[] }).animations ?? [controls as Wrapper];
+
+  // Two frames, so the paused first frame has been rendered before the loop stops
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      group.forEach((wrapper) => {
+        const animation = wrapper.animation ?? (wrapper as Parkable);
+        if (animation.state === "paused") animation.stopDriver?.();
+      });
+    }),
+  );
+}
+
+// ===================================================================
+// CLASS NAMES AND EVENTS
+// ===================================================================
+
+/**
+ * Class names toggled on an element while it is animated in
+ */
+function getAnimatedClassNames(options: ElementOptions): string[] {
+  const classNames: string[] = [];
+  if (options.animatedClassName) classNames.push(options.animatedClassName);
+  if (options.useClassNames) classNames.push(...options.keyframes.split(/\s+/).filter(Boolean));
+  return classNames;
 }
 
 /**
- * Handles completion of a reverse animation
- * Resets element to initial state and calls completion callback
+ * Dispatches `mos:in` / `mos:out` on the document (like AOS's `aos:in` / `aos:out`),
+ * plus `mos:in:<id>` / `mos:out:<id>` when the element has a `data-mos-id`
  */
-function handleReverseAnimationCompletion(
-  element: HTMLElement,
-  controls: AnimationPlaybackControls,
-  mosElement: MosElement,
-): void {
-  // Reset animation to initial state
-  controls.time = 0;
-  controls.pause();
-  activeAnimations.delete(element);
-  element.classList.remove("mos-animate");
-
-  // Update state
-  mosElement.isReversing = false;
-  mosElement.animated = false;
-}
-
-/**
- * Handles completion of a forward animation
- * Cleans up active animation tracking
- */
-function handleForwardAnimationCompletion(
-  element: HTMLElement,
-  controls: AnimationPlaybackControls,
-  options: ElementOptions,
-): void {
-  if (options.once) {
-    // Stop animation permanently for once-only animations
-    controls.stop();
-  }
-
-  // Remove from active animations
-  activeAnimations.delete(element);
-}
-
-/**
- * Handles animation interruption (cancellation, errors, etc.)
- * Cleans up state to prevent memory leaks
- */
-function handleAnimationInterruption(element: HTMLElement): void {
-  const mosElement = findPreparedElement(element);
-  if (mosElement) {
-    mosElement.isReversing = false;
+function dispatchMosEvent(type: "in" | "out", mosElement: MosElement): void {
+  const { element, options } = mosElement;
+  document.dispatchEvent(new CustomEvent(`mos:${type}`, { detail: element }));
+  if (options.id) {
+    document.dispatchEvent(new CustomEvent(`mos:${type}:${options.id}`, { detail: element }));
   }
 }
 
@@ -245,9 +244,7 @@ function createCustomAnimation(
   options: ElementOptions,
   factory: AnimationFactory,
 ): AnimationPlaybackControls {
-  const controls = factory(element, options);
-  setupAnimationCompletionHandler(element, controls, options);
-  return controls;
+  return factory(element, options);
 }
 
 /**
@@ -267,17 +264,14 @@ function createKeyframeAnimation(
   const easing = resolveAnimationEasing(options);
 
   // Create animation with Motion
-  const controls = animate(element, keyframes, {
+  // The delay is deliberately not handed to Motion: it would become part of the
+  // timeline and be replayed (in the wrong place) when the animation is reversed.
+  // play() applies it instead, so like AOS there is no delay when animating out.
+  return animate(element, keyframes, {
     duration: options.timeUnits === "s" ? options.duration : options.duration / 1000,
-    delay: options.timeUnits === "s" ? options.delay : options.delay / 1000,
     ease: easing,
-    fill: "both",
-  } as KeyframeOptions);
-
-  // Set up completion handling
-  setupAnimationCompletionHandler(element, controls, options);
-
-  return controls;
+    autoplay: false,
+  });
 }
 
 /**
@@ -332,14 +326,18 @@ export function setFinalState(mosElement: MosElement): void {
 
   // Use Motion's complete() method to properly reach final state
   // This ensures the animation is in the correct state for smooth reversal
+  // (forward speed first: completing a reversed animation would end on the hidden state)
+  cancelPendingShow(mosElement);
+  controls.speed = 1;
   controls.complete();
 
-  // Mark element as animated and add CSS class
-  element.classList.add("mos-animate");
+  element.classList.add(...getAnimatedClassNames(options));
 
-  // Update element state
+  // Announce it like any other show (AOS fires aos:in here too), unless the element
+  // was already shown and only had its animation rebuilt
+  const wasAnimated = mosElement.animated;
   mosElement.animated = true;
-  mosElement.isReversing = false;
+  if (!wasAnimated) dispatchMosEvent("in", mosElement);
 }
 
 // ===================================================================
@@ -349,6 +347,7 @@ export function setFinalState(mosElement: MosElement): void {
 /**
  * Plays the animation for an element in the forward direction
  * Creates animation controls if they don't exist, otherwise reuses existing ones
+ * If the element is part-way through animating out, it turns around from where it is
  *
  * @param mosElement - The MOS element data containing element, options, and state
  */
@@ -359,45 +358,59 @@ export function play(mosElement: MosElement): void {
   const controls = ensureAnimationControls(element, options);
   if (!controls) return;
 
-  const existingAnimation = activeAnimations.get(element);
+  const start = (): void => {
+    pendingShows.delete(element);
 
-  // Don't interrupt if already animating forward
-  if (existingAnimation && !mosElement.isReversing) return;
+    // Configure for forward playback
+    controls.speed = 1;
+    controls.play();
+  };
 
-  // Configure for forward playback
-  controls.speed = 1;
-  controls.play();
+  // Wait out the delay first (only on the way in, like AOS)
+  cancelPendingShow(mosElement);
+  const delay = getShowDelay(options);
+  if (delay > 0) {
+    pendingShows.set(element, setTimeout(start, delay));
+  } else {
+    start();
+  }
 
-  // Update state
+  element.classList.add(...getAnimatedClassNames(options));
   mosElement.animated = true;
-  mosElement.isReversing = false;
 
-  // Add CSS class for styling and mark as actively animating
-  element.classList.add("mos-animate");
-  activeAnimations.set(element, controls);
+  dispatchMosEvent("in", mosElement);
 }
 
 /**
  * Reverses the animation for an element (used for scroll up behavior)
  * Uses negative playback speed to smoothly reverse the animation
  *
+ * Like AOS, the element counts as hidden as soon as it starts animating out:
+ * Motion leaves it on its first keyframe when the reversed animation ends.
+ *
  * @param mosElement - The MOS element data containing element, options, and state
  */
 export function reverse(mosElement: MosElement): void {
   if (!mosElement.controls) return;
 
-  const { element, controls } = mosElement;
+  const { element, options, controls } = mosElement;
 
-  // Configure for reverse playback
-  mosElement.isReversing = true;
-  controls.speed = -1;
-  controls.play();
+  // An element still waiting out its delay has not moved yet (or is already
+  // animating out), so calling off the delayed show is all that is needed
+  if (!cancelPendingShow(mosElement)) {
+    // Configure for reverse playback
+    controls.speed = -1;
+    controls.play();
+  }
 
-  // Mark as actively animating
-  activeAnimations.set(element, controls);
+  element.classList.remove(...getAnimatedClassNames(options));
+  mosElement.animated = false;
+
+  dispatchMosEvent("out", mosElement);
 }
 
 export default {
+  cancelPendingShow,
   play,
   reverse,
   setFinalState,

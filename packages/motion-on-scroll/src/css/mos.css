@@ -1,29 +1,48 @@
 /* MOS default visibility helpers – prevents initial flash of un-animated elements */
 
-/* no pointer events until animation starts */
-[data-mos] {
-  pointer-events: none;
+/*
+ * Like AOS, the helpers only apply on screen (so printed pages show everything)
+ * and can be switched off for visitors without JavaScript by putting a
+ * `no-js` class on <html> that your script removes. `:where()` keeps the
+ * specificity of a plain `[data-mos]` selector so your own rules still win.
+ */
+@media screen {
+  /* no pointer events until animation starts */
+  :where(html:not(.no-js)) [data-mos] {
+    pointer-events: none;
+  }
+
+  :where(html:not(.no-js)) [data-mos].mos-animate {
+    pointer-events: auto;
+  }
+
+  /* fade & zoom presets */
+  :where(html:not(.no-js)) [data-mos^="fade"],
+  :where(html:not(.no-js)) [data-mos^="zoom"] {
+    will-change: opacity, transform;
+    opacity: 0;
+  }
+
+  /* slide presets */
+  :where(html:not(.no-js)) [data-mos^="slide"] {
+    will-change: transform;
+  }
+
+  /* flip presets */
+  :where(html:not(.no-js)) [data-mos^="flip"] {
+    will-change: transform;
+    transform: rotateY(-180deg);
+    backface-visibility: hidden;
+  }
 }
 
-[data-mos].mos-animate {
-  pointer-events: auto;
-}
-
-/* fade & zoom presets */
-[data-mos^="fade"],
-[data-mos^="zoom"] {
-  will-change: opacity, transform;
-  opacity: 0;
-}
-
-/* slide presets */
-[data-mos^="slide"] {
-  will-change: transform;
-}
-
-/* flip presets */
-[data-mos^="flip"] {
-  will-change: transform;
-  transform: rotateY(-180deg);
-  backface-visibility: hidden;
+/*
+ * Elements that have not animated in yet are held on their first keyframe by
+ * the animation itself, so printing needs an explicit override to show them.
+ */
+@media print {
+  [data-mos] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

@@ -16,10 +16,8 @@ export interface MosElement {
     /** Scroll position where element should animate out (false if disabled) */
     out: number | false;
   };
-  /** Whether the element has been animated */
+  /** Whether the element is currently shown (animated in) */
   animated: boolean;
-  /** Whether the element is currently reversing its animation */
-  isReversing: boolean;
   /** Animation controls (added when animation is first created) */
   controls?: import("motion").AnimationPlaybackControls;
 }
@@ -53,6 +51,16 @@ export interface MosOptions {
   throttleDelay: number;
   /** Debounce delay for resize/orientation events in ms */
   debounceDelay: number;
+  /** 9-grid intersection that decides when the animation triggers */
+  anchorPlacement: AnchorPlacement;
+  /** Class added to every element once MOS has prepared it (false to disable) */
+  initClassName: string | false;
+  /** Class added to an element while it is animated in (false to disable) */
+  animatedClassName: string | false;
+  /** If true, the value of `data-mos` is also added as class names while animated in */
+  useClassNames: boolean;
+  /** If true, MOS is disabled for users who prefer reduced motion */
+  respectReducedMotion: boolean;
 }
 
 export type AnchorPlacement =
@@ -71,8 +79,8 @@ export interface ElementOptions extends MosOptions {
   keyframes: string;
   /** Selector of anchor element whose position controls trigger */
   anchor?: string;
-  /** 9-grid intersection that decides when the animation triggers */
-  anchorPlacement?: AnchorPlacement;
+  /** Value of `data-mos-id`, used to dispatch `mos:in:<id>` / `mos:out:<id>` events */
+  id?: string;
 }
 
 export type PartialMosOptions = Partial<MosOptions>;

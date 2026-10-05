@@ -19,7 +19,7 @@ function containsMosNode(nodes: NodeList | HTMLElement[]): boolean {
     }
 
     // Check if current node has data-mos attribute
-    if (currentNode.dataset && currentNode.dataset.mos) {
+    if (currentNode.hasAttribute?.("data-mos")) {
       return true;
     }
 
@@ -81,6 +81,15 @@ export function startDomObserver(): void {
   });
 }
 
+/**
+ * Stop the DOM mutation observer
+ */
+export function stopDomObserver(): void {
+  domObserver?.disconnect();
+  domObserver = null;
+}
+
 export default {
   startDomObserver,
+  stopDomObserver,
 };

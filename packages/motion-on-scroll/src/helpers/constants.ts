@@ -20,6 +20,11 @@ export const DEFAULT_OPTIONS: MosOptions = {
   startEvent: "DOMContentLoaded",
   throttleDelay: 99,
   debounceDelay: 50,
+  anchorPlacement: "top-bottom",
+  initClassName: "mos-init",
+  animatedClassName: "mos-animate",
+  useClassNames: false,
+  respectReducedMotion: true,
 };
 
 /**
@@ -28,7 +33,7 @@ export const DEFAULT_OPTIONS: MosOptions = {
  */
 export const EASINGS: Record<string, KeyframeOptions["ease"]> = {
   linear: "linear",
-  ease: undefined, // this is how motion represents "ease"
+  ease: [0.25, 0.1, 0.25, 1], // CSS "ease", as used by AOS
   "ease-in": "easeIn",
   "ease-out": "easeOut",
   "ease-in-out": "easeInOut",
@@ -48,6 +53,7 @@ export const EASINGS: Record<string, KeyframeOptions["ease"]> = {
   "ease-out-sine": [0.39, 0.575, 0.565, 1],
   "ease-in-out-sine": [0.445, 0.05, 0.55, 0.95],
 
+  // quad, cubic and quart intentionally share the same curves, exactly as in AOS
   "ease-in-quad": [0.55, 0.085, 0.68, 0.53],
   "ease-out-quad": [0.25, 0.46, 0.45, 0.94],
   "ease-in-out-quad": [0.455, 0.03, 0.515, 0.955],
@@ -75,10 +81,10 @@ export const KEYFRAMES_PRESETS: Record<string, DOMKeyframesDefinition> = {
   "fade-down-right": { opacity: [0, 1], translateY: [-100, 0], translateX: [-100, 0] },
   "fade-down-left": { opacity: [0, 1], translateY: [-100, 0], translateX: [100, 0] },
   // Flips
-  "flip-up": { perspective: [2500, 2500], rotateX: [-100, 0] },
-  "flip-down": { perspective: [2500, 2500], rotateX: [100, 0] },
-  "flip-left": { perspective: [2500, 2500], rotateY: [100, 0] },
-  "flip-right": { perspective: [2500, 2500], rotateY: [-100, 0] },
+  "flip-up": { transformPerspective: 2500, rotateX: [-100, 0] },
+  "flip-down": { transformPerspective: 2500, rotateX: [100, 0] },
+  "flip-left": { transformPerspective: 2500, rotateY: [-100, 0] },
+  "flip-right": { transformPerspective: 2500, rotateY: [100, 0] },
   // Slides
   "slide-up": { translateY: [100, 0] },
   "slide-down": { translateY: [-100, 0] },

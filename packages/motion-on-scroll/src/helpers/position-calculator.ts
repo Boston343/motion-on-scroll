@@ -66,7 +66,13 @@ export function getPositionIn(el: HTMLElement, opts: ElementOptions): number {
       break;
   }
 
-  return triggerPoint + opts.offset;
+  // AOS parity: an element with an inline anchor placement does not get the
+  // global offset on the way in, only an offset set on the element itself
+  const hasInlinePlacement = !!el.getAttribute("data-mos-anchor-placement");
+  const hasInlineOffset = el.hasAttribute("data-mos-offset");
+  const offset = hasInlinePlacement && !hasInlineOffset ? 0 : opts.offset;
+
+  return triggerPoint + offset;
 }
 
 /**

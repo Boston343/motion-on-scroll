@@ -17,15 +17,17 @@ export function resolveElementOptions(el: HTMLElement, global: PartialMosOptions
     duration: readNumber(el, `${DATA_PREFIX}Duration`),
     delay: readNumber(el, `${DATA_PREFIX}Delay`),
     distance: readNumber(el, `${DATA_PREFIX}Distance`),
-    easing: el.dataset[`${DATA_PREFIX}Easing` as any],
+    // an empty attribute falls back to the global easing
+    easing: el.dataset[`${DATA_PREFIX}Easing` as any] || undefined,
     anchor: el.dataset[`${DATA_PREFIX}Anchor` as any],
+    id: el.dataset[`${DATA_PREFIX}Id` as any],
     once: el.hasAttribute(`data-${DATA_PREFIX}-once`)
       ? el.getAttribute(`data-${DATA_PREFIX}-once`) !== "false"
       : undefined,
     mirror: el.hasAttribute(`data-${DATA_PREFIX}-mirror`)
       ? el.getAttribute(`data-${DATA_PREFIX}-mirror`) !== "false"
       : undefined,
-    anchorPlacement: el.dataset[`${DATA_PREFIX}AnchorPlacement` as any] as any,
+    anchorPlacement: (el.dataset[`${DATA_PREFIX}AnchorPlacement` as any] || undefined) as any,
   };
 
   const merged = { ...DEFAULT_OPTIONS, ...global, ...cleanUndefined(opts) } as ElementOptions;

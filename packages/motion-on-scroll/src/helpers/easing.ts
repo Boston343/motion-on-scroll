@@ -13,6 +13,16 @@ export type EasingDefinition = KeyframeOptions["ease"];
 const customEasings: Record<string, EasingDefinition> = {};
 
 /**
+ * A signed decimal number (control points may be negative or above 1 for overshoot curves)
+ */
+const NUM = "(-?(?:\\d+\\.?\\d*|\\.\\d+))";
+const SEP = "\\s*,\\s*";
+const CUBIC_BEZIER_PATTERN = new RegExp(
+  `^cubic-bezier\\s*\\(\\s*${NUM}${SEP}${NUM}${SEP}${NUM}${SEP}${NUM}\\s*\\)$`,
+);
+const ARRAY_PATTERN = new RegExp(`^[\\s[]*${NUM}${SEP}${NUM}${SEP}${NUM}${SEP}${NUM}[\\s\\]]*$`);
+
+/**
  * Resolve a developer-supplied easing value into something Motion accepts.
  *
  * Accepts the following forms (mirrors MOS runtime):
@@ -25,18 +35,17 @@ const customEasings: Record<string, EasingDefinition> = {};
 export function resolveEasing(input: unknown): EasingDefinition | null {
   if (input == null || typeof input !== "string") return undefined;
 
-  // 1. Keyword mapping (check custom easings first, then built-in)
-  if (Object.prototype.hasOwnProperty.call(customEasings, input)) return customEasings[input];
-
-  if (Object.prototype.hasOwnProperty.call(EASINGS, input))
-    return EASINGS[input as keyof typeof EASINGS];
-
   const candidate = input.trim();
 
+  // 1. Keyword mapping (check custom easings first, then built-in)
+  if (Object.prototype.hasOwnProperty.call(customEasings, candidate))
+    return customEasings[candidate];
+
+  if (Object.prototype.hasOwnProperty.call(EASINGS, candidate))
+    return EASINGS[candidate as keyof typeof EASINGS];
+
   // 2. cubic-bezier() string → array
-  const cubicMatch = candidate.match(
-    /cubic-bezier\s*\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\)/,
-  );
+  const cubicMatch = candidate.match(CUBIC_BEZIER_PATTERN);
   if (cubicMatch) {
     const nums = cubicMatch.slice(1, 5).map(Number);
     if (nums.length === 4 && nums.every((n) => Number.isFinite(n))) {
@@ -45,9 +54,7 @@ export function resolveEasing(input: unknown): EasingDefinition | null {
   }
 
   // 3. Bare/Bracketed array
-  const arrayMatch = candidate.match(
-    /^[\s[]*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)[\s\]]*$/,
-  );
+  const arrayMatch = candidate.match(ARRAY_PATTERN);
   if (arrayMatch) {
     const nums = arrayMatch.slice(1, 5).map(Number);
     if (nums.length === 4 && nums.every((n) => Number.isFinite(n))) {

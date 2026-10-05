@@ -41,23 +41,17 @@ function updateElementAnimationState(elementData: MosElement, scrollY: number): 
 
   /**
    * Hides the element by reversing its animation
-   * Only triggers if element is currently animated and not already reversing
    */
   const hideElement = (): void => {
-    if (!elementData.animated || elementData.isReversing) return;
-
-    // Start reverse animation
+    if (!elementData.animated) return;
     reverse(elementData);
   };
 
   /**
    * Shows the element by playing its animation
-   * Only triggers if element is not already animated or is currently reversing
    */
   const showElement = (): void => {
-    if (elementData.animated && !elementData.isReversing) return;
-
-    // Start forward animation
+    if (elementData.animated) return;
     play(elementData);
   };
 
@@ -119,7 +113,11 @@ function calculateElementTriggerPositions(elementData: MosElement): void {
 function setElementInitialState(elementData: MosElement): void {
   const { element, options } = elementData;
 
-  if (isElementAboveViewport(element) && !options.mirror) {
+  // Only when it has also passed its trigger point: an element anchored to something
+  // further down can be above the viewport without being due yet
+  const isPastTrigger = window.scrollY >= elementData.position.in;
+
+  if (isElementAboveViewport(element) && !options.mirror && isPastTrigger) {
     // Element is above viewport - set to final animated state immediately
     setFinalState(elementData);
   } else {
@@ -137,10 +135,13 @@ export function evaluateElementPositions(): void {
   getPreparedElements().forEach((elementData) => {
     calculateElementTriggerPositions(elementData);
 
-    // Only reset initial state for elements that haven't been animated yet
+    // Only set the initial state for elements that haven't been animated yet
     // This prevents flicker during resize for already-animated elements
     if (!elementData.animated) {
       setElementInitialState(elementData);
+    } else if (!elementData.controls) {
+      // Shown element whose animation was rebuilt (its options changed) - keep it shown
+      setFinalState(elementData);
     }
   });
 
@@ -158,7 +159,14 @@ export function evaluateElementPositions(): void {
  * @param throttleDelay - Delay in ms for throttling scroll events
  */
 export function updateScrollHandlerDelays(throttleDelay: number): void {
+  if (throttleDelay === currentThrottleDelay) return;
   currentThrottleDelay = throttleDelay;
+
+  // Re-create an already active handler so the new delay takes effect
+  if (activeScrollHandler) {
+    cleanupScrollHandler();
+    ensureScrollHandlerActive();
+  }
 }
 
 // ===================================================================
