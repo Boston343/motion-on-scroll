@@ -54,10 +54,8 @@ export function cancelPendingShow(mosElement: MosElement): boolean {
 
 /**
  * The show delay of an element in ms
- * Custom animations receive the delay in their options and handle it themselves
  */
 function getShowDelay(options: ElementOptions): number {
-  if (customAnimationRegistry[options.keyframes]) return 0;
   return options.timeUnits === "s" ? options.delay * 1000 : options.delay;
 }
 
@@ -244,7 +242,10 @@ function createCustomAnimation(
   options: ElementOptions,
   factory: AnimationFactory,
 ): AnimationPlaybackControls {
-  return factory(element, options);
+  // MOS applies the show delay itself (see play()), exactly as for built-in animations.
+  // The factory therefore gets a delay of 0: one that forwards `opts.delay` to Motion
+  // would otherwise delay twice, and replay the delay when the animation is reversed.
+  return factory(element, { ...options, delay: 0 });
 }
 
 /**

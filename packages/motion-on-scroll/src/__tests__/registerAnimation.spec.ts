@@ -75,12 +75,14 @@ describe("registerAnimation", () => {
 
     const [el, opts] = factory.mock.calls[0];
     expect(el).toBe(mosElement.element);
-    expect(opts).toBe(mosElement.options);
-    // options are handed over as configured (no unit conversion)
+    // options are handed over as configured (no unit conversion), except for the delay,
+    // which MOS applies itself and therefore reports as 0
+    expect(opts).toEqual({ ...mosElement.options, delay: 0 });
+    expect(mosElement.options.delay).toBe(50);
     expect(opts).toMatchObject({
       keyframes: "register-spec-options",
       duration: 750,
-      delay: 50,
+      delay: 0,
       easing: "linear",
       timeUnits: "ms",
       id: "hero",
@@ -163,7 +165,7 @@ describe("registerAnimation", () => {
     );
   });
 
-  it("leaves the delay to the factory: plays immediately and passes the raw delay", () => {
+  it("applies the delay itself (in seconds too) and passes the factory a delay of 0", () => {
     vi.useFakeTimers();
     try {
       const controls = makeControls();
@@ -177,10 +179,14 @@ describe("registerAnimation", () => {
 
       play(mosElement);
 
-      expect(factory.mock.calls[0][1]).toMatchObject({ delay: 0.5, duration: 1, timeUnits: "s" });
+      expect(factory.mock.calls[0][1]).toMatchObject({ delay: 0, duration: 1, timeUnits: "s" });
+      expect(controls.play).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(499);
+      expect(controls.play).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
       expect(controls.speed).toBe(1);
       expect(controls.play).toHaveBeenCalledTimes(1);
-      expect(vi.getTimerCount()).toBe(0);
     } finally {
       vi.useRealTimers();
     }

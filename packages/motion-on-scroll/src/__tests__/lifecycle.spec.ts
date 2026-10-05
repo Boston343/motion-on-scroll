@@ -1630,7 +1630,7 @@ describe("MOS lifecycle (integration)", () => {
       expect(element.hasAttribute("data-mos-delay")).toBe(false);
     });
 
-    it("should hand the raw delay to a custom animation and play it immediately", () => {
+    it("should delay a custom animation itself and hand its factory a delay of 0", () => {
       const custom: FakeControls = {
         play: vi.fn(),
         pause: vi.fn(),
@@ -1648,18 +1648,21 @@ describe("MOS lifecycle (integration)", () => {
 
       expect(factory).toHaveBeenCalledTimes(1);
       expect(factory.mock.calls[0][0]).toBe(element);
-      expect(factory.mock.calls[0][1]).toMatchObject({ delay: DELAY, timeUnits: "ms" });
+      expect(factory.mock.calls[0][1]).toMatchObject({ delay: 0, timeUnits: "ms" });
       expect(animateMock).not.toHaveBeenCalled();
 
       setScrollY(positionIn(TOP));
       window.dispatchEvent(new Event("scroll"));
 
+      // shown right away as far as state goes, but not playing until the delay has passed
       expect(isShown(element)).toBe(true);
+      expect(custom.play).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(DELAY);
       expect(custom.speed).toBe(1);
       expect(custom.play).toHaveBeenCalledTimes(1);
 
-      // hiding right away reverses the controls: there was no MOS timer to call off
-      vi.advanceTimersByTime(200);
+      // hiding reverses straight away: there is no delay on the way out
       scrollTo(0);
       expect(custom.speed).toBe(-1);
       expect(custom.play).toHaveBeenCalledTimes(2);

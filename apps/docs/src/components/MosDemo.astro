@@ -21,7 +21,6 @@ const animationCode = `MOS.registerAnimation("bouncy", (el, opts) =>
       type: "spring",
       bounce: 0.5,
       duration: opts.timeUnits === "s" ? opts.duration : opts.duration / 1000,
-      delay: opts.timeUnits === "s" ? opts.delay : opts.delay / 1000,
     },
   ),
 );`;
@@ -238,7 +237,6 @@ const animationSections = [
         type: "spring",
         bounce: 0.5,
         duration: opts.timeUnits === "s" ? opts.duration : opts.duration / 1000,
-        delay: opts.timeUnits === "s" ? opts.delay : opts.delay / 1000,
       },
     ),
   );

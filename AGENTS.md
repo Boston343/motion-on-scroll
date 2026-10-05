@@ -129,7 +129,8 @@ whether an animation looks right. Any change to animation behaviour needs a real
   once, a replayed WAAPI animation reports an already-resolved promise.
 - The show delay is applied by MOS with a timer, not passed to Motion: a delay inside Motion's
   timeline is replayed in the wrong place when the animation runs backwards. Like AOS, there is no
-  delay on the way out.
+  delay on the way out. This covers custom `registerAnimation` animations too: their factory is
+  handed `delay: 0` so it cannot add the delay to Motion's timeline a second time.
 - `releaseIdleFrameLoop` in `helpers/animations.ts` uses Motion internals
   (`animations[].animation.stopDriver()`) to stop paused animations ticking every frame. It is
   guarded, so if a Motion upgrade removes them the only symptom is idle `requestAnimationFrame`

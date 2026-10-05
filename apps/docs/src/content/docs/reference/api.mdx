@@ -294,7 +294,6 @@ MOS.registerAnimation("bouncy", (el, opts) =>
       type: "spring",
       bounce: 0.5,
       duration: opts.timeUnits === "s" ? opts.duration : opts.duration / 1000,
-      delay: opts.timeUnits === "s" ? opts.delay : opts.delay / 1000,
     },
   ),
 );
@@ -313,8 +312,8 @@ MOS.init();
   If you happen to name a custom animation the same as existing keyframes, the custom animation will take precedence.
 </Aside>
 
-<Aside type="caution">
-  MOS hides an element by playing its animation backwards. A `delay` passed to `animate()` becomes part of that timeline, so it is also replayed when the element animates out. Leave it out if your elements can animate out (that is, unless you use `once`).
+<Aside>
+  Do not pass a `delay` to `animate()`. MOS applies `delay` / `data-mos-delay` to custom animations itself, on the way in only, so `opts.delay` is always `0` inside the factory.
 </Aside>
 
 #### name
@@ -335,7 +334,7 @@ interface ElementOptions {
   offset: number;
   /** Animation duration default */
   duration: number;
-  /** Delay before starting the animation */
+  /** Always 0 inside a factory: MOS applies the delay itself */
   delay: number;
   /** Units for duration and delay ("ms" or "s") */
   timeUnits: "ms" | "s";

@@ -1103,7 +1103,7 @@ describe("show delay", () => {
     expect(events).toEqual([]);
   });
 
-  it("hands the raw delay to a custom animation and plays it immediately", () => {
+  it("applies the delay itself for a custom animation and hands the factory a delay of 0", () => {
     const controls = { play: vi.fn(), pause: vi.fn(), complete: vi.fn(), speed: 0 };
     const factory = vi.fn((_el: HTMLElement, _opts: any) => controls as any);
     registerAnimation("animations-spec-delayed-custom", factory);
@@ -1114,16 +1114,39 @@ describe("show delay", () => {
 
     play(mosElement);
 
-    expect(factory.mock.calls[0][1].delay).toBe(300);
+    // the factory must not be able to add the delay to motion's timeline a second time
+    expect(factory.mock.calls[0][1].delay).toBe(0);
+    expect(mosElement.options.delay).toBe(300);
+    expect(mosElement.animated).toBe(true);
+    expect(controls.play).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(299);
+    expect(controls.play).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
     expect(controls.speed).toBe(1);
     expect(controls.play).toHaveBeenCalledTimes(1);
-    expect(vi.getTimerCount()).toBe(0);
-    expect(cancelPendingShow(mosElement)).toBe(false);
 
-    // and reversing it turns the controls around as usual
+    // and reversing it turns the controls around as usual, without a delay
     reverse(mosElement);
     expect(controls.speed).toBe(-1);
     expect(controls.play).toHaveBeenCalledTimes(2);
+  });
+
+  it("calls off a delayed custom animation that is hidden before the delay elapses", () => {
+    const controls = { play: vi.fn(), pause: vi.fn(), complete: vi.fn(), speed: 0 };
+    registerAnimation("animations-spec-delayed-custom-2", () => controls as any);
+    const mosElement = track({
+      "data-mos": "animations-spec-delayed-custom-2",
+      "data-mos-delay": "300",
+    });
+
+    play(mosElement);
+    vi.advanceTimersByTime(100);
+    reverse(mosElement);
+    vi.advanceTimersByTime(1000);
+
+    expect(controls.play).not.toHaveBeenCalled();
+    expect(mosElement.animated).toBe(false);
   });
 });
 
