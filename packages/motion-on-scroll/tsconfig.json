@@ -11,13 +11,8 @@
 
     // transpiling with typescript
     "outDir": "dist",
-    "rootDir": "src",
-
-    // paths
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "declarationMap": false, // src is not published, so maps would point at missing files
+    "rootDir": "src"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "src/__tests__"]
