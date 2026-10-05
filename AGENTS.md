@@ -72,7 +72,7 @@ quirks included.
   then `pnpm docs:build`
 - Docs dev server: `pnpm docs:dev` (needs the library built first: `pnpm mos:build`); build:
   `pnpm docs:build`, which builds the library itself. The docs always use the workspace library,
-  not the npm release, so a clean checkout (such as the Cloudflare Pages build) must build it.
+  not the npm release.
 - Library watch build: `pnpm mos:dev`
 
 ## Conventions
@@ -114,6 +114,11 @@ whether an animation looks right. Any change to animation behaviour needs a real
 
 ## Gotchas
 
+- Node: development needs `^22.22.2 || >=24` (root `engines`). On older 22.x `tsdown` fails with
+  `Failed to import module "unrun"` because it cannot load `tsdown.config.ts` natively, and jsdom
+  needs 22.22.2. `.node-version` pins the version for hosted builds: Cloudflare Pages defaults to
+  Node 22.16 without it. Pages runs `pnpm mos:build && pnpm docs:build`, output `apps/docs/dist`,
+  and only rebuilds when files under `apps/docs/` change.
 - TypeScript is pinned to 6.0.x: `typescript-eslint` does not support TypeScript 7 yet. Re-check
   before bumping.
 - pnpm is pinned to 11.x in `packageManager`. Its settings live in `pnpm-workspace.yaml`; pnpm 11
