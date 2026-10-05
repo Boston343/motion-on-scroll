@@ -23,11 +23,13 @@ Framework-agnostic, MOS lets you add scroll-triggered animations with nothing bu
 npm i motion-on-scroll
 ```
 
+With a bundler (Vite, Astro, webpack, ...):
+
 ```html
 <!-- Styles -->
 <link href="https://cdn.jsdelivr.net/npm/motion-on-scroll@latest/dist/mos.css" rel="stylesheet" />
 
-<!-- Script & init -->
+<!-- Script & init (requires a bundler, e.g. Vite/Astro, to resolve the import) -->
 <script type="module">
   import { MOS } from "motion-on-scroll";
   MOS.init();
@@ -35,6 +37,16 @@ npm i motion-on-scroll
 
 <!-- Element to animate -->
 <div data-mos="fade-up">Hello world</div>
+```
+
+Without a bundler, load the standalone build from a CDN. It bundles Motion and exposes a global `MOS`, just like AOS does:
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/motion-on-scroll@latest/dist/mos.css" />
+<script src="https://cdn.jsdelivr.net/npm/motion-on-scroll@latest/dist/mos.global.js"></script>
+<script>
+  MOS.init();
+</script>
 ```
 
 **Migrating from AOS?** Check the guide → <https://motion-on-scroll.pages.dev/getting-started/migrate-from-aos>

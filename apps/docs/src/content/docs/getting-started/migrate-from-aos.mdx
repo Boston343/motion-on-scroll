@@ -43,7 +43,7 @@ yarn add motion-on-scroll
 <link rel="stylesheet" href="bower_components/aos/dist/aos.css" />
 
 <script type="module">
-  import { AOS } from 'aos';
+  import AOS from 'aos';
   AOS.init({
     duration: 600,
     once: true
@@ -52,6 +52,8 @@ yarn add motion-on-scroll
 ```
   </TabItem>
   <TabItem label="After (MOS)">
+
+The bare `motion-on-scroll` import below must be resolved by a bundler such as Vite or Astro (or an import map). It will not work in a plain HTML page served as-is.
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/motion-on-scroll@latest/dist/mos.css" />
@@ -62,6 +64,16 @@ yarn add motion-on-scroll
     duration: 600,
     once: true
   });
+</script>
+```
+
+If you loaded AOS with a `<script>` tag instead, use the standalone build, which exposes a global `MOS` the same way AOS exposes `AOS`:
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/motion-on-scroll@latest/dist/mos.css" />
+<script src="https://cdn.jsdelivr.net/npm/motion-on-scroll@latest/dist/mos.global.js"></script>
+<script>
+  MOS.init({ duration: 600, once: true });
 </script>
 ```
   </TabItem>
@@ -79,10 +91,12 @@ yarn add motion-on-scroll
 | `data-aos-offset` | `data-mos-offset`    | Positive number in **px**               |
 | `data-aos-delay`  | `data-mos-delay`     | **ms**                                  |
 | `data-aos-duration` | `data-mos-duration` | **ms**                                  |
-| `data-aos-easing` | `data-mos-easing`    | Any CSS easing or spring()              |
+| `data-aos-easing` | `data-mos-easing`    | Easing keyword or `cubic-bezier()`      |
 | `data-aos-anchor` | `data-mos-anchor`    | New trigger for animation                       |
 | `data-aos-anchor-placement` | `data-mos-anchor-placement` | 9 keyword combos |
 | `data-aos-once`   | `data-mos-once`      | Boolean                                 |
+| `data-aos-mirror` | `data-mos-mirror`    | Boolean                                 |
+| `data-aos-id`     | `data-mos-id`        | Used for `mos:in:<id>` / `mos:out:<id>` events |
 
 ## 4. Global options equivalence
 
@@ -99,6 +113,16 @@ yarn add motion-on-scroll
 | `debounceDelay` | `debounceDelay` | `50`    |
 | `startEvent` | `startEvent` | `'DOMContentLoaded'` |
 | `disableMutationObserver` | `disableMutationObserver` | `false` |
+| `anchorPlacement` | `anchorPlacement` | `'top-bottom'` |
+| `initClassName` | `initClassName` | `'mos-init'` (AOS: `'aos-init'`) |
+| `animatedClassName` | `animatedClassName` | `'mos-animate'` (AOS: `'aos-animate'`) |
+| `useClassNames` | `useClassNames` | `false` |
+
+The `aos:in` / `aos:out` events become `mos:in` / `mos:out`.
+
+<Aside>
+  One default differs from AOS: MOS does not animate for visitors who prefer reduced motion. Pass `respectReducedMotion: false` to `MOS.init()` for AOS's behaviour.
+</Aside>
 
 ## 5. Verify animation presets
 

@@ -9,7 +9,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 `init(options?)`
 
-Initialises observers for every element possessing `data-mos`. Call this once on page load after [registering any additional](#register-custom-presets) presets desired.
+Finds every element possessing `data-mos` and sets up scroll tracking for them. Call this once on page load after [registering any additional](#register-custom-presets) presets desired.
 
 ```ts
 import { MOS } from 'motion-on-scroll';
@@ -43,7 +43,7 @@ Animation duration. (MOS uses the browser’s **Web Animations API** where possi
 *Type*: `number`  
 *Default*: `0`
 
-Delay before the animation starts.
+Delay before an element animates in. As in AOS, there is no delay when it animates out.
 
 #### timeUnits
 
@@ -55,7 +55,7 @@ Units for duration and delay.
 #### distance
 
 *Type*: `number` (pixels)  
-*Default*: `24`
+*Default*: `100`
 
 Travel distance for directional presets like `fade-up`.
 
@@ -81,14 +81,14 @@ You can also pass a custom cubic-bezier string in any of the following formats:
 - `cubic-bezier(x1, y1, x2, y2)`
 - `[x1,y1,x2,y2]` or `x1,y1,x2,y2`
 
-Need something else? Define a custom easing preset with [`MOS.registerEasing`](#registereasingname-definition) and use it in your presets.
+Need something else? Define a custom easing preset with [`MOS.registerEasing`](#registereasing) and use it in your presets.
 
 #### once
 
 *Type*: `boolean`  
 *Default*: `false`
 
-Play only once, then unobserve the element.
+If true, an element animates only once: after it has animated in, it is not reversed or replayed when you scroll back past it.
 
 #### mirror
 
@@ -132,13 +132,70 @@ Throttle delay for scroll events in ms.
 
 Debounce delay for resize/orientation events in ms.
 
+#### anchorPlacement
+
+*Type*: `'top-bottom' | 'top-center' | 'top-top' | 'center-bottom' | 'center-center' | 'center-top' | 'bottom-bottom' | 'bottom-center' | 'bottom-top'`  
+*Default*: `'top-bottom'`
+
+Which part of the element has to reach which part of the viewport to trigger the animation. Can be overridden per element with `data-mos-anchor-placement`.
+
+#### initClassName
+
+*Type*: `string | false`  
+*Default*: `'mos-init'`
+
+Class added to every element once MOS has prepared it. `false` disables it.
+
+#### animatedClassName
+
+*Type*: `string | false`  
+*Default*: `'mos-animate'`
+
+Class present on an element while it is animated in. `false` disables it. The bundled stylesheet re-enables pointer events using the default name.
+
+#### useClassNames
+
+*Type*: `boolean`  
+*Default*: `false`
+
+If true, the value of `data-mos` is also added to the element as class names while it is animated in.
+
+#### respectReducedMotion
+
+*Type*: `boolean`  
+*Default*: `true`
+
+If true, MOS is disabled (exactly as with [`disable`](#disable)) for visitors who have asked their system to reduce motion. Set to `false` to animate regardless.
+
+Calling `init()` more than once merges the new options into the ones passed earlier.
+
 ## refresh()
 
-Update all element positions and re-initialize the scroll system.
+Recalculates the trigger positions of all tracked elements. Has no effect until the start event has fired.
 
 ## refreshHard()
 
-Re-evaluates the DOM for all `[data-mos]` elements and calls `refresh()`. Useful after client-side navigation or significant DOM changes. This is internally called automatically when DOM changes are detected, unless you disable the mutation observer.
+Re-evaluates the DOM for `[data-mos]` elements: new elements start being tracked, removed ones are cleaned up, and elements that already animated in stay as they are. Useful after client-side navigation or significant DOM changes. This is called automatically when DOM changes are detected, unless you disable the mutation observer.
+
+## destroy()
+
+Removes every listener and observer and stops tracking all elements, leaving them in whatever visual state they are in. Options from earlier `init()` calls are forgotten, so MOS can be initialised again from scratch. Useful when tearing down a page in a single-page app.
+
+## Events
+
+Like AOS, MOS dispatches events on `document` when an element animates in or out. `event.detail` is the element.
+
+```ts
+document.addEventListener('mos:in', ({ detail }) => {
+  console.log('animated in', detail);
+});
+
+document.addEventListener('mos:out', ({ detail }) => {
+  console.log('animated out', detail);
+});
+```
+
+Give an element a [`data-mos-id`](/reference/attributes/#data-mos-id) to also receive `mos:in:<id>` and `mos:out:<id>` for that element only.
 
 ## Register Custom Presets
 
@@ -174,7 +231,7 @@ MOS.init();
 #### name
 
 *Type*: `string`  
-Unique identifier (case-sensitive). Must be non-empty and cannot collide with existing easing keywords.
+Unique identifier (case-sensitive). Must be non-empty. Registering a name that already exists replaces it.
 
 #### definition
 
@@ -210,7 +267,7 @@ MOS.init({
 #### name
 
 *Type*: `string`  
-Unique identifier (case-sensitive). Must be non-empty and cannot collide with existing easing keywords.
+Unique identifier (case-sensitive). Must be non-empty. Registering a name that already exists replaces it.
 
 #### definition
 
@@ -229,7 +286,7 @@ Registers a custom animation that can subsequently be referenced via the `data-m
 import { MOS } from 'motion-on-scroll';
 import { animate } from "motion";
 
-registerAnimation("bouncy", (el, opts) =>
+MOS.registerAnimation("bouncy", (el, opts) =>
   animate(
     el,
     { opacity: [0, 1], scale: [0.4, 1] },
@@ -256,6 +313,10 @@ MOS.init();
   If you happen to name a custom animation the same as existing keyframes, the custom animation will take precedence.
 </Aside>
 
+<Aside type="caution">
+  MOS hides an element by playing its animation backwards. A `delay` passed to `animate()` becomes part of that timeline, so it is also replayed when the element animates out. Leave it out if your elements can animate out (that is, unless you use `once`).
+</Aside>
+
 #### name
 
 *Type*: `string`  
@@ -266,7 +327,7 @@ Unique identifier (case-sensitive). Must be non-empty.
 *Type*: `(el: HTMLElement, opts: ElementOptions) => AnimationPlaybackControls`  
 A factory function that uses [motion's animate function](https://motion.dev/docs/animate) to create an animation.
 
-`ElementOptions` is an object that contains the merged global options and element-level options. It has the following properties which you can use to enable customizable animations via data attributes on individual elements:
+`ElementOptions` is an object that contains the merged global options and element-level options (it extends the global `MosOptions`). It has the following properties which you can use to enable customizable animations via data attributes on individual elements:
 
 ```ts
 interface ElementOptions {
@@ -296,6 +357,22 @@ interface ElementOptions {
   throttleDelay: number;
   /** Debounce delay for resize/orientation events in ms */
   debounceDelay: number;
+  /** 9-grid intersection that decides when the animation triggers */
+  anchorPlacement: AnchorPlacement;
+  /** Class added to every element once MOS has prepared it (false to disable) */
+  initClassName: string | false;
+  /** Class added to an element while it is animated in (false to disable) */
+  animatedClassName: string | false;
+  /** If true, the value of data-mos is also added as class names while animated in */
+  useClassNames: boolean;
+  /** If true, MOS is disabled for users who prefer reduced motion */
+  respectReducedMotion: boolean;
+  /** Preset animation name (the value of `data-mos`) */
+  keyframes: string;
+  /** Selector of anchor element whose position controls trigger */
+  anchor?: string;
+  /** Value of `data-mos-id`, used for the `mos:in:<id>` / `mos:out:<id>` events */
+  id?: string;
 }
 ```
 
@@ -304,7 +381,7 @@ interface ElementOptions {
 motion-on-scroll also exports functions directly:
 
 ```ts
-import { init, refresh, refreshHard, registerAnimation, registerEasing, registerKeyframes } from 'motion-on-scroll';
+import { init, refresh, refreshHard, destroy, registerAnimation, registerEasing, registerKeyframes } from 'motion-on-scroll';
 ```
 
 They are identical to the namespaced versions.

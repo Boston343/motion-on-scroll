@@ -39,13 +39,37 @@ You'll need to import MOS styles, and run the `MOS.init()` function.
 
 
 <Tabs>
-  <TabItem label="Vanilla JS">
+  <TabItem label="CDN (no bundler)">
+
+The standalone build bundles Motion and exposes a global `MOS` object, so it works in a plain HTML page:
 
 ```html
 <!-- Import MOS styles -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/motion-on-scroll@latest/dist/mos.css" />
 
-<!-- Initialize MOS -->
+<!-- Load MOS and initialize it -->
+<script src="https://cdn.jsdelivr.net/npm/motion-on-scroll@latest/dist/mos.global.js"></script>
+<script>
+  MOS.init();
+</script>
+
+<!-- Somewhere in your markup -->
+<section data-mos="fade-up">
+  ...
+</section>
+```
+
+`window.MOS` has the same functions as the module build, plus Motion's `animate` (as `MOS.animate`) for use with [`registerAnimation`](/reference/api/#registeranimation).
+  </TabItem>
+  <TabItem label="Vanilla JS (with a bundler)">
+
+The bare `motion-on-scroll` import below must be resolved by a bundler such as Vite (or an import map). It will not work in a plain HTML page served as-is.
+
+```html
+<!-- Import MOS styles -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/motion-on-scroll@latest/dist/mos.css" />
+
+<!-- Initialize MOS (requires a bundler, e.g. Vite, to resolve the import) -->
 <script type="module">
   import { MOS } from 'motion-on-scroll';
   MOS.init();
@@ -86,34 +110,17 @@ That’s it! Every element declaring a `data-mos` value is now animated when it 
 
 ### CSS file
 
-MOS ships with a small stylesheet that ensures elements are hidden upon initial page load. Import it from `motion-on-scroll/dist/mos.css` or copy the file into your own pipeline. The contents of the file are below for convenience.
+MOS ships with a small stylesheet that keeps elements hidden until they animate in. Import it from `motion-on-scroll/mos.css` (or `motion-on-scroll/dist/mos.css`), load it from a CDN as shown above, or copy [the file](https://github.com/Boston343/motion-on-scroll/blob/main/packages/motion-on-scroll/src/css/mos.css) into your own pipeline.
 
-```css
-/* no pointer events until animation starts */
-[data-mos] {
-  pointer-events: none;
-}
+## Accessibility and no-JavaScript fallbacks
 
-[data-mos].mos-animate {
-  pointer-events: auto;
-}
+- **Reduced motion.** By default MOS does nothing for visitors whose system is set to reduce motion: elements are shown immediately, without animating. Pass `respectReducedMotion: false` to `MOS.init()` to animate regardless.
+- **Printing.** The stylesheet shows every element when the page is printed.
+- **No JavaScript.** Elements start hidden and are revealed by the script. To keep content visible when scripts are unavailable, put a `no-js` class on `<html>` and remove it from an inline script (MOS's styles only apply to `html:not(.no-js)`, the same convention AOS uses):
 
-/* fade & zoom presets */
-[data-mos^="fade"],
-[data-mos^="zoom"] {
-  will-change: opacity, transform;
-  opacity: 0;
-}
-
-/* slide presets */
-[data-mos^="slide"] {
-  will-change: transform;
-}
-
-/* flip presets */
-[data-mos^="flip"] {
-  will-change: transform;
-  transform: rotateY(-180deg);
-  backface-visibility: hidden;
-}
+```html
+<html class="no-js">
+  <head>
+    <script>document.documentElement.classList.remove("no-js");</script>
+    ...
 ```
