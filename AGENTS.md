@@ -70,7 +70,9 @@ quirks included.
 - Lint + format fix: `pnpm format` (whole repo) or `pnpm mos:format` (library)
 - What CI runs: `pnpm typecheck`, `pnpm run ci` (= `mos:build`, `mos:format:check`, `test:run`),
   then `pnpm docs:build`
-- Docs dev server: `pnpm docs:dev`; build: `pnpm docs:build` (needs the library built first)
+- Docs dev server: `pnpm docs:dev` (needs the library built first: `pnpm mos:build`); build:
+  `pnpm docs:build`, which builds the library itself. The docs always use the workspace library,
+  not the npm release, so a clean checkout (such as the Cloudflare Pages build) must build it.
 - Library watch build: `pnpm mos:dev`
 
 ## Conventions

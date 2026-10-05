@@ -37,6 +37,5 @@ jobs:
       - name: Run CI
         run: pnpm run ci
 
-      # the library is already built by the step above
       - name: Build docs
         run: pnpm docs:build
