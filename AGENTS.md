@@ -108,6 +108,9 @@ whether an animation looks right. Any change to animation behaviour needs a real
   changesets.
 - On push to `main`, `.github/workflows/release.yml` runs `changesets/action`, which only opens or
   updates the "Version Packages" PR. It does not publish.
+- `apps/docs` depends on the library as `workspace:*`. Keep it that way: with a version range,
+  `changeset version` rewrites the range, the lockfile no longer matches, and the release workflow
+  fails (its changelog formatting step triggers a frozen `pnpm install`).
 - Publishing to npm is manual: `pnpm mos:publish:release` (or `mos:publish:beta` /
   `mos:publish:next`); `prepublishOnly` runs the library's `ci` script first. Publish before the
   docs deploy (see Maintainer decisions).
