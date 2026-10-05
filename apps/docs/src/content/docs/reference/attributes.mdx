@@ -9,7 +9,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 ### data-mos
 *Type*: `PresetName`  
-*Default*: —  
+*Default*: `fade` (when the attribute is present but empty)  
 
 Any [preset animation key](/reference/presets/) (e.g. `fade-up`, `zoom-in`).
 
@@ -19,19 +19,25 @@ Need something else? Define custom keyframes with [`MOS.registerKeyframes`](/ref
 *Type*: `number` (px)  
 *Default*: value from `offset` passed to `MOS.init` or **120**  
 
-Additional root margin before the element is considered *in view*.
+Additional distance (in pixels) before the element is considered *in view*.
 
 ### data-mos-duration
-*Type*: `number` (ms)  
+*Type*: `number` (ms, or seconds when the global `timeUnits` is `"s"`)  
 *Default*: value from `duration` global or **400** 
 
 Animation duration.
 
 ### data-mos-delay
-*Type*: `number` (ms)  
+*Type*: `number` (ms, or seconds when the global `timeUnits` is `"s"`)  
 *Default*: value from `delay` global or **0**  
 
-Delay before the animation starts.
+Delay before the element animates in. As in AOS, there is no delay when it animates out.
+
+### data-mos-distance
+*Type*: `number` (px)  
+*Default*: value from `distance` global or **100**  
+
+Travel distance for directional presets like `fade-up`.
 
 ### data-mos-easing
 *Type*: `string`  
@@ -60,29 +66,35 @@ Need something else? Define a custom easing preset with [`MOS.registerEasing`](/
 *Type*: `boolean`  
 *Default*: value from `once` global or **false**  
 
-Play only once then unobserve.
+Animate only once: after the element has animated in, it is not reversed or replayed when you scroll back past it. The bare attribute (or any value other than `"false"`) means `true`.
 
 ### data-mos-mirror
 *Type*: `boolean`  
 *Default*: value from `mirror` global or **false**  
 
-Play when scrolling up as well as down (requires once: false).
+Play when scrolling up as well as down (requires once: false). The bare attribute (or any value other than `"false"`) means `true`.
 
 ### data-mos-anchor
 *Type*: `CSSSelector`  
 *Default*: —  
 
-Observe a *different* element; animation still runs on the target.
+Use the position of a *different* element to decide when to trigger; the animation still runs on the target.
 
 ### data-mos-anchor-placement
 *Type*: placement keyword  
-*Default*: **top-bottom**  
+*Default*: value from `anchorPlacement` global or **top-bottom**  
 
 One of the nine combinations below:
 
 `top-top`, `top-center`, `top-bottom`, `center-top`, `center-center`, `center-bottom`, `bottom-top`, `bottom-center`, `bottom-bottom`.
 
 Use these to describe which part of the *anchor* meets which part of the *target* when deciding the trigger point.
+
+### data-mos-id
+
+*Type*: `string`
+
+Identifier used for element-specific [events](/reference/api/#events): an element with `data-mos-id="hero"` dispatches `mos:in:hero` and `mos:out:hero` in addition to the general `mos:in` / `mos:out`.
 
 ## Element vs Global precedence
 

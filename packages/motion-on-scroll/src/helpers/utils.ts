@@ -86,6 +86,14 @@ export function isDisabled(disable: DeviceDisable): boolean {
 }
 
 /**
+ * Whether the user has asked the system to minimise non-essential motion.
+ */
+export function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/**
  * Remove all `data-mos*` attributes from the given element, used when MOS is
  * globally disabled so that any CSS rules tied to these attributes stop
  * applying.
@@ -101,6 +109,7 @@ export function removeMosAttributes(el: Element): void {
 export default {
   debounce,
   isDisabled,
+  prefersReducedMotion,
   removeMosAttributes,
   throttle,
 };

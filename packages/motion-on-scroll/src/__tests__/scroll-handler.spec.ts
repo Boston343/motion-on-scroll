@@ -1,12 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AnimationPlaybackControls } from "motion";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DEFAULT_OPTIONS } from "../helpers/constants.js";
 import {
   cleanupScrollHandler,
   ensureScrollHandlerActive,
   evaluateElementPositions,
   updateScrollHandlerDelays,
 } from "../helpers/scroll-handler.js";
-import type { MosElement } from "../helpers/types.js";
+import type { ElementOptions, MosElement } from "../helpers/types.js";
 
 // Mock all dependencies
 vi.mock("../helpers/animations.js", () => ({
@@ -39,143 +41,105 @@ import {
 } from "../helpers/position-calculator.js";
 import { throttle } from "../helpers/utils.js";
 
+// ===================================================================
+// TEST HELPERS
+// ===================================================================
+
+const POSITION_IN = 100;
+const POSITION_OUT = 400;
+
+function makeMosElement(
+  options: Partial<ElementOptions> = {},
+  state: Partial<Omit<MosElement, "element" | "options">> = {},
+): MosElement {
+  const element = document.createElement("div");
+  element.setAttribute("data-mos", "fade");
+
+  return {
+    element,
+    options: { ...DEFAULT_OPTIONS, keyframes: "fade", ...options },
+    position: { in: POSITION_IN, out: false },
+    animated: false,
+    controls: undefined,
+    ...state,
+  };
+}
+
+function makeControls(): AnimationPlaybackControls {
+  return {
+    play: vi.fn(),
+    pause: vi.fn(),
+    stop: vi.fn(),
+    complete: vi.fn(),
+    cancel: vi.fn(),
+    speed: 1,
+    time: 0,
+  } as unknown as AnimationPlaybackControls;
+}
+
+function setScrollY(value: number): void {
+  Object.defineProperty(window, "scrollY", { value, writable: true, configurable: true });
+}
+
+/**
+ * Sets the scroll position and dispatches a real scroll event on the window
+ */
+function scrollTo(value: number): void {
+  setScrollY(value);
+  window.dispatchEvent(new Event("scroll"));
+}
+
+/**
+ * Scroll listeners currently registered through the (spied) window API
+ */
+function scrollListenerCalls(spy: ReturnType<typeof vi.spyOn>): unknown[][] {
+  return spy.mock.calls.filter(([type]) => type === "scroll");
+}
+
 describe("scroll-handler.ts", () => {
-  let mockElement1: HTMLElement;
-  let mockElement2: HTMLElement;
-  let mockMosElement1: MosElement;
-  let mockMosElement2: MosElement;
   let addEventListenerSpy: ReturnType<typeof vi.spyOn>;
   let removeEventListenerSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    // Create mock DOM elements
-    mockElement1 = document.createElement("div");
-    mockElement1.setAttribute("data-mos", "fade");
-    mockElement1.setAttribute("id", "element1");
+    // Reset module state left behind by the previous test
+    cleanupScrollHandler();
+    updateScrollHandlerDelays(DEFAULT_OPTIONS.throttleDelay);
 
-    mockElement2 = document.createElement("div");
-    mockElement2.setAttribute("data-mos", "slide-up");
-    mockElement2.setAttribute("id", "element2");
-
-    // Create mock MosElement objects
-    mockMosElement1 = {
-      element: mockElement1,
-      options: {
-        duration: 400,
-        easing: "ease",
-        delay: 0,
-        once: true,
-        mirror: false,
-        offset: 120,
-        disable: false,
-        startEvent: "DOMContentLoaded",
-        throttleDelay: 99,
-        debounceDelay: 50,
-        timeUnits: "ms",
-        distance: 100,
-        disableMutationObserver: false,
-        keyframes: "fade",
-      },
-      position: { in: 100, out: false },
-      animated: false,
-      isReversing: false,
-      controls: undefined,
-    };
-
-    mockMosElement2 = {
-      element: mockElement2,
-      options: {
-        duration: 600,
-        easing: "ease-out",
-        delay: 100,
-        once: false,
-        mirror: true,
-        offset: 150,
-        disable: false,
-        startEvent: "DOMContentLoaded",
-        throttleDelay: 99,
-        debounceDelay: 50,
-        timeUnits: "ms",
-        distance: 200,
-        disableMutationObserver: false,
-        keyframes: "slide-up",
-      },
-      position: { in: 200, out: 400 },
-      animated: false,
-      isReversing: false,
-      controls: undefined,
-    };
-
-    // Setup spies for window event listeners
-    addEventListenerSpy = vi.spyOn(window, "addEventListener");
-    removeEventListenerSpy = vi.spyOn(window, "removeEventListener");
-
-    // Mock window.scrollY
-    Object.defineProperty(window, "scrollY", {
-      value: 0,
-      writable: true,
-    });
+    setScrollY(0);
 
     // Reset all mocks
     vi.clearAllMocks();
 
     // Setup default mock implementations
     vi.mocked(getPreparedElements).mockReturnValue([]);
-    vi.mocked(getPositionIn).mockReturnValue(100);
-    vi.mocked(getPositionOut).mockReturnValue(200);
+    vi.mocked(getPositionIn).mockReturnValue(POSITION_IN);
+    vi.mocked(getPositionOut).mockReturnValue(POSITION_OUT);
     vi.mocked(isElementAboveViewport).mockReturnValue(false);
 
-    // Clean up any existing scroll handlers
+    // Setup spies for window event listeners
+    addEventListenerSpy = vi.spyOn(window, "addEventListener");
+    removeEventListenerSpy = vi.spyOn(window, "removeEventListener");
+  });
+
+  afterEach(() => {
     cleanupScrollHandler();
+    addEventListenerSpy.mockRestore();
+    removeEventListenerSpy.mockRestore();
   });
 
-  describe("updateScrollHandlerDelays", () => {
-    it("should update the throttle delay", () => {
-      updateScrollHandlerDelays(150);
-
-      // Ensure scroll handler is active to test the delay is applied
-      ensureScrollHandlerActive();
-
-      expect(throttle).toHaveBeenCalledWith(expect.any(Function), 150);
-    });
-
-    it("should apply new delay when scroll handler is reinitialized", () => {
-      // Reset to default delay first
-      updateScrollHandlerDelays(99);
-      vi.clearAllMocks();
-
-      // First initialization with default delay
-      ensureScrollHandlerActive();
-      expect(throttle).toHaveBeenCalledWith(expect.any(Function), 99);
-
-      // Cleanup and update delay
-      cleanupScrollHandler();
-      updateScrollHandlerDelays(200);
-      vi.clearAllMocks();
-
-      // Reinitialize with new delay
-      ensureScrollHandlerActive();
-      expect(throttle).toHaveBeenCalledWith(expect.any(Function), 200);
-    });
-  });
+  // ===================================================================
+  // SCROLL HANDLER LIFECYCLE
+  // ===================================================================
 
   describe("ensureScrollHandlerActive", () => {
-    it("should set up scroll event listener", () => {
+    it("should register a passive scroll listener throttled with the default delay", () => {
       ensureScrollHandlerActive();
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith("scroll", expect.any(Function), {
-        passive: true,
-      });
-    });
-
-    it("should create throttled scroll handler", () => {
-      // Reset to default delay first
-      updateScrollHandlerDelays(99);
-      vi.clearAllMocks();
-
-      ensureScrollHandlerActive();
-
+      expect(throttle).toHaveBeenCalledTimes(1);
       expect(throttle).toHaveBeenCalledWith(expect.any(Function), 99);
+      expect(scrollListenerCalls(addEventListenerSpy)).toEqual([
+        ["scroll", vi.mocked(throttle).mock.results[0].value, { passive: true }],
+      ]);
     });
 
     it("should prevent multiple initializations", () => {
@@ -183,33 +147,54 @@ describe("scroll-handler.ts", () => {
       ensureScrollHandlerActive();
       ensureScrollHandlerActive();
 
-      // Should only be called once
-      expect(addEventListenerSpy).toHaveBeenCalledTimes(1);
+      expect(scrollListenerCalls(addEventListenerSpy)).toHaveLength(1);
       expect(throttle).toHaveBeenCalledTimes(1);
+    });
+
+    it("should process each scroll event exactly once however often it is called", () => {
+      const mosElement = makeMosElement();
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      ensureScrollHandlerActive();
+      ensureScrollHandlerActive();
+
+      scrollTo(POSITION_IN);
+
+      expect(play).toHaveBeenCalledTimes(1);
     });
 
     it("should allow reinitialization after cleanup", () => {
       ensureScrollHandlerActive();
-      expect(addEventListenerSpy).toHaveBeenCalledTimes(1);
-
       cleanupScrollHandler();
       ensureScrollHandlerActive();
 
-      expect(addEventListenerSpy).toHaveBeenCalledTimes(2);
+      expect(scrollListenerCalls(addEventListenerSpy)).toHaveLength(2);
+      expect(scrollListenerCalls(removeEventListenerSpy)).toHaveLength(1);
     });
   });
 
   describe("cleanupScrollHandler", () => {
-    it("should remove scroll event listener when active", () => {
+    it("should remove the registered scroll listener", () => {
       ensureScrollHandlerActive();
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1];
+      const [, scrollHandler] = scrollListenerCalls(addEventListenerSpy)[0];
 
       cleanupScrollHandler();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith("scroll", scrollHandler);
+      expect(scrollListenerCalls(removeEventListenerSpy)).toEqual([["scroll", scrollHandler]]);
     });
 
-    it("should do nothing when no active handler", () => {
+    it("should stop reacting to scroll events", () => {
+      const mosElement = makeMosElement();
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      ensureScrollHandlerActive();
+
+      cleanupScrollHandler();
+      scrollTo(POSITION_IN + 500);
+
+      expect(play).not.toHaveBeenCalled();
+      expect(reverse).not.toHaveBeenCalled();
+    });
+
+    it("should do nothing when no handler is active", () => {
       cleanupScrollHandler();
 
       expect(removeEventListenerSpy).not.toHaveBeenCalled();
@@ -221,294 +206,718 @@ describe("scroll-handler.ts", () => {
       cleanupScrollHandler();
       cleanupScrollHandler();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledTimes(1);
+      expect(scrollListenerCalls(removeEventListenerSpy)).toHaveLength(1);
     });
   });
 
-  describe("evaluateElementPositions", () => {
-    beforeEach(() => {
-      vi.mocked(getPreparedElements).mockReturnValue([mockMosElement1, mockMosElement2]);
+  // ===================================================================
+  // CONFIGURATION MANAGEMENT
+  // ===================================================================
+
+  describe("updateScrollHandlerDelays", () => {
+    it("should not register a listener when no handler is active", () => {
+      updateScrollHandlerDelays(150);
+
+      expect(throttle).not.toHaveBeenCalled();
+      expect(addEventListenerSpy).not.toHaveBeenCalled();
+      expect(removeEventListenerSpy).not.toHaveBeenCalled();
     });
 
-    it("should recalculate positions for all elements", () => {
-      evaluateElementPositions();
+    it("should use the new delay for a handler that is created afterwards", () => {
+      updateScrollHandlerDelays(150);
 
-      expect(getPositionIn).toHaveBeenCalledWith(mockElement1, mockMosElement1.options);
-      expect(getPositionIn).toHaveBeenCalledWith(mockElement2, mockMosElement2.options);
+      ensureScrollHandlerActive();
+
+      expect(throttle).toHaveBeenCalledTimes(1);
+      expect(throttle).toHaveBeenCalledWith(expect.any(Function), 150);
     });
 
-    it("should calculate out positions for mirror elements", () => {
-      evaluateElementPositions();
+    it("should re-create an active listener when the delay changes", () => {
+      ensureScrollHandlerActive();
+      const [, originalHandler] = scrollListenerCalls(addEventListenerSpy)[0];
 
-      // mockMosElement1 has mirror: false, so no out position
-      expect(getPositionOut).not.toHaveBeenCalledWith(mockElement1, expect.anything());
+      updateScrollHandlerDelays(200);
 
-      // mockMosElement2 has mirror: true and once: false, so should calculate out position
-      expect(getPositionOut).toHaveBeenCalledWith(mockElement2, mockMosElement2.options);
+      // Old listener removed, a new one registered with the new delay
+      expect(scrollListenerCalls(removeEventListenerSpy)).toEqual([["scroll", originalHandler]]);
+      expect(scrollListenerCalls(addEventListenerSpy)).toHaveLength(2);
+      expect(throttle).toHaveBeenCalledTimes(2);
+      expect(throttle).toHaveBeenLastCalledWith(expect.any(Function), 200);
+
+      const [, newHandler, listenerOptions] = scrollListenerCalls(addEventListenerSpy)[1];
+      expect(newHandler).toBe(vi.mocked(throttle).mock.results[1].value);
+      expect(listenerOptions).toEqual({ passive: true });
     });
 
-    it("should set initial states for all elements", () => {
-      evaluateElementPositions();
+    it("should leave exactly one working listener after the delay changed", () => {
+      const mosElement = makeMosElement();
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      ensureScrollHandlerActive();
 
-      expect(isElementAboveViewport).toHaveBeenCalledWith(mockElement1);
-      expect(isElementAboveViewport).toHaveBeenCalledWith(mockElement2);
+      updateScrollHandlerDelays(200);
+      scrollTo(POSITION_IN);
+
+      expect(play).toHaveBeenCalledTimes(1);
+      expect(play).toHaveBeenCalledWith(mosElement);
     });
 
-    it("should set final state for elements above viewport (non-mirror)", () => {
-      vi.mocked(isElementAboveViewport).mockImplementation((el) => el === mockElement1);
+    it("should not re-create an active listener when the delay is unchanged", () => {
+      ensureScrollHandlerActive();
 
-      evaluateElementPositions();
+      updateScrollHandlerDelays(99);
+      updateScrollHandlerDelays(99);
 
-      expect(setFinalState).toHaveBeenCalledWith(mockMosElement1);
-      expect(setInitialState).toHaveBeenCalledWith(mockMosElement2);
+      expect(throttle).toHaveBeenCalledTimes(1);
+      expect(scrollListenerCalls(addEventListenerSpy)).toHaveLength(1);
+      expect(scrollListenerCalls(removeEventListenerSpy)).toHaveLength(0);
     });
 
-    it("should set initial state for elements above viewport (mirror)", () => {
-      const mirrorElement = {
-        ...mockMosElement1,
-        options: { ...mockMosElement1.options, mirror: true },
-      };
-      vi.mocked(getPreparedElements).mockReturnValue([mirrorElement]);
-      vi.mocked(isElementAboveViewport).mockReturnValue(true);
+    it("should only re-create the listener once when the same new delay is applied repeatedly", () => {
+      ensureScrollHandlerActive();
 
-      evaluateElementPositions();
+      updateScrollHandlerDelays(200);
+      updateScrollHandlerDelays(200);
+      updateScrollHandlerDelays(200);
 
-      expect(setInitialState).toHaveBeenCalledWith(mirrorElement);
+      expect(throttle).toHaveBeenCalledTimes(2);
+      expect(scrollListenerCalls(addEventListenerSpy)).toHaveLength(2);
+      expect(scrollListenerCalls(removeEventListenerSpy)).toHaveLength(1);
+    });
+
+    it("should remember a delay set while inactive and not re-create for it later", () => {
+      updateScrollHandlerDelays(200);
+      ensureScrollHandlerActive();
+
+      updateScrollHandlerDelays(200);
+
+      expect(throttle).toHaveBeenCalledTimes(1);
+      expect(scrollListenerCalls(removeEventListenerSpy)).toHaveLength(0);
+    });
+  });
+
+  // ===================================================================
+  // SHOW / HIDE DECISION TABLE
+  // ===================================================================
+
+  describe("scroll event processing", () => {
+    type Expected = "play" | "reverse" | "nothing";
+    type Row = {
+      name: string;
+      options: Partial<ElementOptions>;
+      out: number | false;
+      animated: boolean;
+      scrollY: number;
+      expected: Expected;
+    };
+
+    const rows: Row[] = [
+      // --- default (no once, no mirror) ---
+      {
+        name: "hidden element below its trigger stays hidden",
+        options: {},
+        out: false,
+        animated: false,
+        scrollY: POSITION_IN - 1,
+        expected: "nothing",
+      },
+      {
+        name: "hidden element exactly at its trigger is shown",
+        options: {},
+        out: false,
+        animated: false,
+        scrollY: POSITION_IN,
+        expected: "play",
+      },
+      {
+        name: "hidden element past its trigger is shown",
+        options: {},
+        out: false,
+        animated: false,
+        scrollY: POSITION_IN + 5000,
+        expected: "play",
+      },
+      {
+        name: "shown element exactly at its trigger stays shown",
+        options: {},
+        out: false,
+        animated: true,
+        scrollY: POSITION_IN,
+        expected: "nothing",
+      },
+      {
+        name: "shown element past its trigger is not played again",
+        options: {},
+        out: false,
+        animated: true,
+        scrollY: POSITION_IN + 5000,
+        expected: "nothing",
+      },
+      {
+        name: "shown element scrolled back above its trigger is hidden",
+        options: {},
+        out: false,
+        animated: true,
+        scrollY: POSITION_IN - 1,
+        expected: "reverse",
+      },
+      {
+        name: "shown non-mirror element is not hidden by a stray out position",
+        options: { mirror: false },
+        out: POSITION_OUT,
+        animated: true,
+        scrollY: POSITION_OUT + 50,
+        expected: "nothing",
+      },
+      // --- once ---
+      {
+        name: "once: hidden element at its trigger is shown",
+        options: { once: true },
+        out: false,
+        animated: false,
+        scrollY: POSITION_IN,
+        expected: "play",
+      },
+      {
+        name: "once: hidden element below its trigger stays hidden",
+        options: { once: true },
+        out: false,
+        animated: false,
+        scrollY: POSITION_IN - 1,
+        expected: "nothing",
+      },
+      {
+        name: "once: shown element scrolled back above its trigger stays shown",
+        options: { once: true },
+        out: false,
+        animated: true,
+        scrollY: POSITION_IN - 1,
+        expected: "nothing",
+      },
+      {
+        name: "once: shown element past its trigger is not played again",
+        options: { once: true },
+        out: false,
+        animated: true,
+        scrollY: POSITION_IN + 50,
+        expected: "nothing",
+      },
+      // --- mirror ---
+      {
+        name: "mirror: hidden element between in and out is shown",
+        options: { mirror: true },
+        out: POSITION_OUT,
+        animated: false,
+        scrollY: POSITION_OUT - 1,
+        expected: "play",
+      },
+      {
+        name: "mirror: shown element between in and out stays shown",
+        options: { mirror: true },
+        out: POSITION_OUT,
+        animated: true,
+        scrollY: POSITION_OUT - 1,
+        expected: "nothing",
+      },
+      {
+        name: "mirror: shown element exactly at its out position is hidden",
+        options: { mirror: true },
+        out: POSITION_OUT,
+        animated: true,
+        scrollY: POSITION_OUT,
+        expected: "reverse",
+      },
+      {
+        name: "mirror: shown element scrolled past its out position is hidden",
+        options: { mirror: true },
+        out: POSITION_OUT,
+        animated: true,
+        scrollY: POSITION_OUT + 50,
+        expected: "reverse",
+      },
+      {
+        name: "mirror: hidden element past its out position is not shown",
+        options: { mirror: true },
+        out: POSITION_OUT,
+        animated: false,
+        scrollY: POSITION_OUT + 50,
+        expected: "nothing",
+      },
+      {
+        name: "mirror: shown element scrolled back above its trigger is hidden",
+        options: { mirror: true },
+        out: POSITION_OUT,
+        animated: true,
+        scrollY: POSITION_IN - 1,
+        expected: "reverse",
+      },
+      {
+        name: "mirror: hidden element below its trigger stays hidden",
+        options: { mirror: true },
+        out: POSITION_OUT,
+        animated: false,
+        scrollY: POSITION_IN - 1,
+        expected: "nothing",
+      },
+      {
+        name: "mirror without an out position: shown element far down the page stays shown",
+        options: { mirror: true },
+        out: false,
+        animated: true,
+        scrollY: POSITION_OUT + 50,
+        expected: "nothing",
+      },
+      // --- mirror + once (once wins) ---
+      {
+        name: "mirror + once: shown element past the out position stays shown",
+        options: { mirror: true, once: true },
+        out: POSITION_OUT,
+        animated: true,
+        scrollY: POSITION_OUT + 50,
+        expected: "nothing",
+      },
+      {
+        name: "mirror + once: hidden element past the out position is shown",
+        options: { mirror: true, once: true },
+        out: POSITION_OUT,
+        animated: false,
+        scrollY: POSITION_OUT + 50,
+        expected: "play",
+      },
+      {
+        name: "mirror + once: shown element scrolled back above its trigger stays shown",
+        options: { mirror: true, once: true },
+        out: false,
+        animated: true,
+        scrollY: POSITION_IN - 1,
+        expected: "nothing",
+      },
+    ];
+
+    it.each(rows)("$name", ({ options, out, animated, scrollY, expected }) => {
+      const mosElement = makeMosElement(
+        options,
+        // Shown elements always have controls
+        { position: { in: POSITION_IN, out }, animated, controls: makeControls() },
+      );
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      ensureScrollHandlerActive();
+
+      scrollTo(scrollY);
+
+      if (expected === "play") {
+        expect(play).toHaveBeenCalledTimes(1);
+        expect(play).toHaveBeenCalledWith(mosElement);
+      } else {
+        expect(play).not.toHaveBeenCalled();
+      }
+
+      if (expected === "reverse") {
+        expect(reverse).toHaveBeenCalledTimes(1);
+        expect(reverse).toHaveBeenCalledWith(mosElement);
+      } else {
+        expect(reverse).not.toHaveBeenCalled();
+      }
+
+      // Scrolling only ever plays or reverses - it never snaps an element to a state
+      expect(setInitialState).not.toHaveBeenCalled();
       expect(setFinalState).not.toHaveBeenCalled();
     });
 
-    it("should process current scroll position after setup", () => {
-      window.scrollY = 150;
-      mockMosElement1.position.in = 100; // Should trigger animation
-      vi.mocked(getPreparedElements).mockReturnValue([mockMosElement1]);
+    it("should not consult an isReversing flag when deciding to hide", () => {
+      // Regression: the old handler skipped hiding (and re-played) based on isReversing
+      const mosElement = makeMosElement(
+        { mirror: true },
+        { position: { in: POSITION_IN, out: POSITION_OUT }, animated: true },
+      );
+      (mosElement as MosElement & { isReversing?: boolean }).isReversing = true;
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      ensureScrollHandlerActive();
+
+      scrollTo(POSITION_OUT + 50);
+      expect(reverse).toHaveBeenCalledTimes(1);
+
+      scrollTo(POSITION_IN + 1);
+      expect(play).not.toHaveBeenCalled();
+    });
+
+    it("should decide independently for every tracked element", () => {
+      const below = makeMosElement({}, { position: { in: 900, out: false } });
+      const entering = makeMosElement({}, { position: { in: 200, out: false } });
+      const shown = makeMosElement({}, { position: { in: 50, out: false }, animated: true });
+      const leaving = makeMosElement({}, { position: { in: 700, out: false }, animated: true });
+      const onceShown = makeMosElement(
+        { once: true },
+        { position: { in: 700, out: false }, animated: true },
+      );
+      vi.mocked(getPreparedElements).mockReturnValue([below, entering, shown, leaving, onceShown]);
+      ensureScrollHandlerActive();
+
+      scrollTo(500);
+
+      expect(vi.mocked(play).mock.calls).toEqual([[entering]]);
+      expect(vi.mocked(reverse).mock.calls).toEqual([[leaving]]);
+    });
+
+    it("should read the tracked elements again on every scroll event", () => {
+      const first = makeMosElement();
+      const second = makeMosElement();
+      ensureScrollHandlerActive();
+
+      vi.mocked(getPreparedElements).mockReturnValue([first]);
+      scrollTo(POSITION_IN);
+      vi.mocked(getPreparedElements).mockReturnValue([second]);
+      scrollTo(POSITION_IN + 1);
+
+      expect(vi.mocked(play).mock.calls).toEqual([[first], [second]]);
+    });
+
+    it("should show, hide and show again as the page scrolls down, up and down", () => {
+      const mosElement = makeMosElement();
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      vi.mocked(play).mockImplementation((mosEl) => {
+        mosEl.animated = true;
+      });
+      vi.mocked(reverse).mockImplementation((mosEl) => {
+        mosEl.animated = false;
+      });
+      ensureScrollHandlerActive();
+
+      scrollTo(POSITION_IN + 10);
+      scrollTo(POSITION_IN + 20); // still shown, nothing new
+      expect(play).toHaveBeenCalledTimes(1);
+      expect(reverse).not.toHaveBeenCalled();
+
+      scrollTo(POSITION_IN - 10);
+      scrollTo(POSITION_IN - 20); // still hidden, nothing new
+      expect(play).toHaveBeenCalledTimes(1);
+      expect(reverse).toHaveBeenCalledTimes(1);
+
+      scrollTo(POSITION_IN);
+      expect(play).toHaveBeenCalledTimes(2);
+      expect(reverse).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not throw for elements with an undefined in position", () => {
+      const mosElement = makeMosElement();
+      mosElement.position.in = undefined as unknown as number;
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      ensureScrollHandlerActive();
+
+      expect(() => scrollTo(150)).not.toThrow();
+      expect(play).not.toHaveBeenCalled();
+    });
+  });
+
+  // ===================================================================
+  // POSITION EVALUATION
+  // ===================================================================
+
+  describe("evaluateElementPositions", () => {
+    it("should recalculate the in position for every element with its own options", () => {
+      const first = makeMosElement({ offset: 10 }, { position: { in: -1, out: false } });
+      const second = makeMosElement({ offset: 20 }, { position: { in: -1, out: false } });
+      vi.mocked(getPreparedElements).mockReturnValue([first, second]);
+      vi.mocked(getPositionIn).mockImplementation((_el, opts) => 1000 + opts.offset);
 
       evaluateElementPositions();
 
-      // Should trigger play since scrollY (150) >= position.in (100)
-      expect(play).toHaveBeenCalledWith(mockMosElement1);
+      expect(getPositionIn).toHaveBeenCalledWith(first.element, first.options);
+      expect(getPositionIn).toHaveBeenCalledWith(second.element, second.options);
+      expect(first.position).toEqual({ in: 1010, out: false });
+      expect(second.position).toEqual({ in: 1020, out: false });
     });
 
-    it("should preserve animated element states during resize (flicker fix)", () => {
-      // Setup: Create elements with different animation states
-      const animatedElement = {
-        ...mockMosElement1,
-        animated: true, // Already animated
-      };
-      const nonAnimatedElement = {
-        ...mockMosElement2,
-        animated: false, // Not yet animated
-      };
+    it("should calculate an out position only for mirror elements without once", () => {
+      const plain = makeMosElement();
+      const mirror = makeMosElement({ mirror: true });
+      const mirrorOnce = makeMosElement({ mirror: true, once: true });
+      vi.mocked(getPreparedElements).mockReturnValue([plain, mirror, mirrorOnce]);
 
-      vi.mocked(getPreparedElements).mockReturnValue([animatedElement, nonAnimatedElement]);
+      evaluateElementPositions();
+
+      expect(plain.position.out).toBe(false);
+      expect(mirror.position.out).toBe(POSITION_OUT);
+      expect(mirrorOnce.position.out).toBe(false);
+      expect(getPositionOut).toHaveBeenCalledTimes(1);
+      expect(getPositionOut).toHaveBeenCalledWith(mirror.element, mirror.options);
+    });
+
+    it("should recalculate positions of already animated elements too", () => {
+      const shown = makeMosElement(
+        { mirror: true },
+        { position: { in: -1, out: -1 }, animated: true, controls: makeControls() },
+      );
+      vi.mocked(getPreparedElements).mockReturnValue([shown]);
+      setScrollY(POSITION_IN + 1);
+
+      evaluateElementPositions();
+
+      expect(shown.position).toEqual({ in: POSITION_IN, out: POSITION_OUT });
+    });
+
+    // --- not animated ---
+
+    it("should set the initial state for a not-animated element in or below the viewport", () => {
+      const mosElement = makeMosElement();
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
       vi.mocked(isElementAboveViewport).mockReturnValue(false);
 
       evaluateElementPositions();
 
-      // Should recalculate positions for both elements
-      expect(getPositionIn).toHaveBeenCalledWith(animatedElement.element, animatedElement.options);
-      expect(getPositionIn).toHaveBeenCalledWith(
-        nonAnimatedElement.element,
-        nonAnimatedElement.options,
-      );
-
-      // Should NOT reset initial state for already-animated element (prevents flicker)
-      expect(setInitialState).not.toHaveBeenCalledWith(animatedElement);
-      expect(setFinalState).not.toHaveBeenCalledWith(animatedElement);
-
-      // Should still set initial state for non-animated element
-      expect(setInitialState).toHaveBeenCalledWith(nonAnimatedElement);
-    });
-  });
-
-  describe("scroll event processing", () => {
-    beforeEach(() => {
-      ensureScrollHandlerActive();
-      vi.mocked(getPreparedElements).mockReturnValue([mockMosElement1, mockMosElement2]);
+      expect(isElementAboveViewport).toHaveBeenCalledWith(mosElement.element);
+      expect(setInitialState).toHaveBeenCalledTimes(1);
+      expect(setInitialState).toHaveBeenCalledWith(mosElement);
+      expect(setFinalState).not.toHaveBeenCalled();
     });
 
-    it("should trigger show animation when scrolling past entry point", () => {
-      window.scrollY = 150;
-      mockMosElement1.position.in = 100;
-      mockMosElement1.animated = false;
+    it("should set the final state for a not-animated element above the viewport that is past its trigger", () => {
+      const above = makeMosElement();
+      const below = makeMosElement();
+      vi.mocked(getPreparedElements).mockReturnValue([above, below]);
+      vi.mocked(isElementAboveViewport).mockImplementation((el) => el === above.element);
+      vi.mocked(getPositionIn).mockImplementation((el) => (el === above.element ? 100 : 5000));
+      setScrollY(1000);
 
-      // Simulate scroll event
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
-      scrollHandler();
-
-      expect(play).toHaveBeenCalledWith(mockMosElement1);
-    });
-
-    it("should not trigger show animation if already animated", () => {
-      window.scrollY = 150;
-      mockMosElement1.position.in = 100;
-      mockMosElement1.animated = true;
-      mockMosElement1.isReversing = false;
-
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
-      scrollHandler();
-
-      expect(play).not.toHaveBeenCalled();
-    });
-
-    it("should trigger show animation if currently reversing", () => {
-      window.scrollY = 150;
-      mockMosElement1.position.in = 100;
-      mockMosElement1.animated = true;
-      mockMosElement1.isReversing = true;
-
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
-      scrollHandler();
-
-      expect(play).toHaveBeenCalledWith(mockMosElement1);
-    });
-
-    it("should trigger hide animation with mirror when scrolling past exit point", () => {
-      window.scrollY = 450;
-      mockMosElement2.position.out = 400;
-      mockMosElement2.animated = true;
-      mockMosElement2.isReversing = false;
-      mockMosElement2.options.mirror = true;
-      mockMosElement2.options.once = false;
-
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
-      scrollHandler();
-
-      expect(reverse).toHaveBeenCalledWith(mockMosElement2);
-    });
-
-    it("should not trigger hide animation if already reversing", () => {
-      window.scrollY = 450;
-      mockMosElement2.position.out = 400;
-      mockMosElement2.animated = true;
-      mockMosElement2.isReversing = true;
-      mockMosElement2.options.mirror = true;
-      mockMosElement2.options.once = false;
-
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
-      scrollHandler();
-
-      expect(reverse).not.toHaveBeenCalled();
-    });
-
-    it("should not trigger hide animation if not animated", () => {
-      window.scrollY = 450;
-      mockMosElement2.position.out = 400;
-      mockMosElement2.animated = false;
-      mockMosElement2.options.mirror = true;
-      mockMosElement2.options.once = false;
-
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
-      scrollHandler();
-
-      expect(reverse).not.toHaveBeenCalled();
-    });
-
-    it("should trigger hide animation when scrolling back before entry point (non-once)", () => {
-      window.scrollY = 50;
-      mockMosElement2.position.in = 100;
-      mockMosElement2.animated = true;
-      mockMosElement2.isReversing = false;
-      mockMosElement2.options.once = false;
-
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
-      scrollHandler();
-
-      expect(reverse).toHaveBeenCalledWith(mockMosElement2);
-    });
-
-    it("should not trigger hide animation for once elements", () => {
-      window.scrollY = 50;
-      mockMosElement1.position.in = 100;
-      mockMosElement1.animated = true;
-      mockMosElement1.isReversing = false;
-      mockMosElement1.options.once = true;
-
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
-      scrollHandler();
-
-      expect(reverse).not.toHaveBeenCalled();
-    });
-
-    it("should handle elements with undefined positions", () => {
-      window.scrollY = 150;
-      mockMosElement1.position.in = undefined as any;
-
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
-
-      // Should not throw an error
-      expect(() => scrollHandler()).not.toThrow();
-    });
-
-    it("should handle elements with false out positions", () => {
-      window.scrollY = 450;
-      mockMosElement1.position.out = false;
-      mockMosElement1.options.mirror = true;
-      mockMosElement1.options.once = false;
-
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
-      scrollHandler();
-
-      // Should not trigger reverse since out position is false
-      expect(reverse).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("integration scenarios", () => {
-    it("should handle complete lifecycle", () => {
-      // 1. Update delays
-      updateScrollHandlerDelays(120);
-
-      // 2. Ensure handler is active
-      ensureScrollHandlerActive();
-      expect(addEventListenerSpy).toHaveBeenCalledWith("scroll", expect.any(Function), {
-        passive: true,
-      });
-
-      // 3. Evaluate positions
-      vi.mocked(getPreparedElements).mockReturnValue([mockMosElement1]);
       evaluateElementPositions();
-      expect(getPositionIn).toHaveBeenCalled();
 
-      // 4. Cleanup
-      cleanupScrollHandler();
-      expect(removeEventListenerSpy).toHaveBeenCalled();
+      expect(vi.mocked(setFinalState).mock.calls).toEqual([[above]]);
+      expect(vi.mocked(setInitialState).mock.calls).toEqual([[below]]);
     });
 
-    it("should handle multiple elements with different configurations", () => {
-      const elements = [
-        mockMosElement1, // once: true, mirror: false
-        mockMosElement2, // once: false, mirror: true
-      ];
-      vi.mocked(getPreparedElements).mockReturnValue(elements);
-      ensureScrollHandlerActive();
+    it("should set the final state when the scroll position is exactly at the trigger", () => {
+      const mosElement = makeMosElement();
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      vi.mocked(isElementAboveViewport).mockReturnValue(true);
+      setScrollY(POSITION_IN);
 
-      // Scroll to trigger different behaviors
-      window.scrollY = 250;
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
-      scrollHandler();
+      evaluateElementPositions();
 
-      // Both elements should trigger show animations
-      expect(play).toHaveBeenCalledWith(mockMosElement1);
-      expect(play).toHaveBeenCalledWith(mockMosElement2);
+      expect(vi.mocked(setFinalState).mock.calls).toEqual([[mosElement]]);
+      expect(setInitialState).not.toHaveBeenCalled();
     });
 
-    it("should maintain state across multiple scroll events", () => {
-      vi.mocked(getPreparedElements).mockReturnValue([mockMosElement1]);
-      ensureScrollHandlerActive();
-      const scrollHandler = addEventListenerSpy.mock.calls[0][1] as () => void;
+    // Regression: an element above the viewport is not necessarily due yet (anchored to
+    // something further down, or a top-top placement). Finalising it would be undone by
+    // the scroll pass right away: mos:in immediately followed by mos:out on every refresh.
+    it("should set the initial state for an element above the viewport whose trigger is not reached", () => {
+      const mosElement = makeMosElement({ anchor: "#far-below" });
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      vi.mocked(isElementAboveViewport).mockReturnValue(true);
+      vi.mocked(getPositionIn).mockReturnValue(5000);
+      setScrollY(1000);
 
-      // First scroll - trigger animation
-      window.scrollY = 150;
-      mockMosElement1.position.in = 100;
-      mockMosElement1.animated = false;
-      scrollHandler();
-      expect(play).toHaveBeenCalledTimes(1);
+      evaluateElementPositions();
 
-      // Second scroll - element now animated, shouldn't trigger again
-      vi.clearAllMocks();
-      mockMosElement1.animated = true;
-      scrollHandler();
+      expect(vi.mocked(setInitialState).mock.calls).toEqual([[mosElement]]);
+      expect(setFinalState).not.toHaveBeenCalled();
       expect(play).not.toHaveBeenCalled();
+      expect(reverse).not.toHaveBeenCalled();
+    });
+
+    it("should compare the scroll position with the recalculated trigger, not the stale one", () => {
+      // stale position says "past the trigger", the new layout says "not yet"
+      const notDue = makeMosElement({}, { position: { in: 0, out: false } });
+      // stale position says "not yet", the new layout says "past the trigger"
+      const due = makeMosElement({}, { position: { in: 9000, out: false } });
+      vi.mocked(getPreparedElements).mockReturnValue([notDue, due]);
+      vi.mocked(isElementAboveViewport).mockReturnValue(true);
+      vi.mocked(getPositionIn).mockImplementation((el) => (el === notDue.element ? 5000 : 200));
+      setScrollY(1000);
+
+      evaluateElementPositions();
+
+      expect(vi.mocked(setInitialState).mock.calls).toEqual([[notDue]]);
+      expect(vi.mocked(setFinalState).mock.calls).toEqual([[due]]);
+    });
+
+    it("should not show and hide an untriggered element above the viewport on repeated refreshes", () => {
+      const mosElement = makeMosElement();
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      vi.mocked(isElementAboveViewport).mockReturnValue(true);
+      vi.mocked(getPositionIn).mockReturnValue(5000);
+      // behave like the real state setters as far as the flag is concerned
+      vi.mocked(setFinalState).mockImplementation((el) => {
+        el.animated = true;
+      });
+      vi.mocked(play).mockImplementation((el) => {
+        el.animated = true;
+      });
+      setScrollY(1000);
+
+      evaluateElementPositions();
+      evaluateElementPositions();
+      evaluateElementPositions();
+
+      expect(setFinalState).not.toHaveBeenCalled();
+      expect(play).not.toHaveBeenCalled();
+      expect(reverse).not.toHaveBeenCalled();
+      expect(mosElement.animated).toBe(false);
+    });
+
+    it("should not play an element again that was just put in its final state", () => {
+      const mosElement = makeMosElement();
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      vi.mocked(isElementAboveViewport).mockReturnValue(true);
+      vi.mocked(setFinalState).mockImplementation((el) => {
+        el.animated = true;
+      });
+      setScrollY(POSITION_IN + 2000);
+
+      evaluateElementPositions();
+
+      expect(setFinalState).toHaveBeenCalledTimes(1);
+      expect(play).not.toHaveBeenCalled();
+      expect(reverse).not.toHaveBeenCalled();
+      expect(mosElement.animated).toBe(true);
+    });
+
+    it("should set the initial state for a not-animated mirror element above the viewport", () => {
+      const mosElement = makeMosElement({ mirror: true });
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      vi.mocked(isElementAboveViewport).mockReturnValue(true);
+      // past both its in and its out position
+      setScrollY(POSITION_OUT + 1000);
+
+      evaluateElementPositions();
+
+      expect(vi.mocked(setInitialState).mock.calls).toEqual([[mosElement]]);
+      expect(setFinalState).not.toHaveBeenCalled();
+    });
+
+    it("should hand a hidden element that already has controls to setInitialState, not setFinalState", () => {
+      // e.g. an element that was reversed: setInitialState itself leaves existing controls alone
+      const mosElement = makeMosElement({}, { controls: makeControls() });
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+
+      evaluateElementPositions();
+
+      expect(setFinalState).not.toHaveBeenCalled();
+      expect(mosElement.controls!.pause).not.toHaveBeenCalled();
+      expect(mosElement.controls!.complete).not.toHaveBeenCalled();
+    });
+
+    // --- animated ---
+
+    it("should leave an animated element that has controls alone", () => {
+      const controls = makeControls();
+      const mosElement = makeMosElement({}, { animated: true, controls });
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      setScrollY(POSITION_IN + 50);
+
+      evaluateElementPositions();
+
+      expect(setInitialState).not.toHaveBeenCalled();
+      expect(setFinalState).not.toHaveBeenCalled();
+      expect(play).not.toHaveBeenCalled();
+      expect(reverse).not.toHaveBeenCalled();
+      expect(isElementAboveViewport).not.toHaveBeenCalled();
+      expect(mosElement.animated).toBe(true);
+      expect(mosElement.controls).toBe(controls);
+      expect(controls.pause).not.toHaveBeenCalled();
+      expect(controls.complete).not.toHaveBeenCalled();
+    });
+
+    it("should leave an animated element with controls alone even if it is above the viewport", () => {
+      const mosElement = makeMosElement({}, { animated: true, controls: makeControls() });
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      vi.mocked(isElementAboveViewport).mockReturnValue(true);
+      setScrollY(POSITION_IN + 5000);
+
+      evaluateElementPositions();
+
+      expect(setInitialState).not.toHaveBeenCalled();
+      expect(setFinalState).not.toHaveBeenCalled();
+    });
+
+    it("should set the final state for an animated element whose controls were dropped", () => {
+      const mosElement = makeMosElement({}, { animated: true, controls: undefined });
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      setScrollY(POSITION_IN + 50);
+
+      evaluateElementPositions();
+
+      expect(vi.mocked(setFinalState).mock.calls).toEqual([[mosElement]]);
+      expect(setInitialState).not.toHaveBeenCalled();
+      // It is shown already: it must not be played (and announced) again
+      expect(play).not.toHaveBeenCalled();
+      expect(reverse).not.toHaveBeenCalled();
+    });
+
+    it("should treat each element according to its own state", () => {
+      const fresh = makeMosElement();
+      const shown = makeMosElement({}, { animated: true, controls: makeControls() });
+      const rebuilt = makeMosElement({}, { animated: true });
+      vi.mocked(getPreparedElements).mockReturnValue([fresh, shown, rebuilt]);
+      vi.mocked(getPositionIn).mockImplementation((el) => (el === fresh.element ? 5000 : 0));
+      setScrollY(100);
+
+      evaluateElementPositions();
+
+      expect(vi.mocked(setInitialState).mock.calls).toEqual([[fresh]]);
+      expect(vi.mocked(setFinalState).mock.calls).toEqual([[rebuilt]]);
+      expect(play).not.toHaveBeenCalled();
+      expect(reverse).not.toHaveBeenCalled();
+    });
+
+    // --- processing the current scroll position ---
+
+    it("should play elements that are already in view using the recalculated positions", () => {
+      const inView = makeMosElement({}, { position: { in: 99999, out: false } });
+      const below = makeMosElement({}, { position: { in: -99999, out: false } });
+      vi.mocked(getPreparedElements).mockReturnValue([inView, below]);
+      vi.mocked(getPositionIn).mockImplementation((el) => (el === inView.element ? 100 : 900));
+      setScrollY(150);
+
+      evaluateElementPositions();
+
+      // The stale positions would have given the opposite result
+      expect(vi.mocked(play).mock.calls).toEqual([[inView]]);
+      expect(reverse).not.toHaveBeenCalled();
+    });
+
+    it("should set the state before processing the scroll position", () => {
+      const mosElement = makeMosElement();
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      setScrollY(POSITION_IN);
+
+      evaluateElementPositions();
+
+      const initialOrder = vi.mocked(setInitialState).mock.invocationCallOrder[0];
+      const playOrder = vi.mocked(play).mock.invocationCallOrder[0];
+      expect(initialOrder).toBeLessThan(playOrder);
+    });
+
+    it("should hide a shown element that the new layout moved back below the viewport", () => {
+      const mosElement = makeMosElement({}, { animated: true, controls: makeControls() });
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      vi.mocked(getPositionIn).mockReturnValue(5000);
+      setScrollY(100);
+
+      evaluateElementPositions();
+
+      expect(vi.mocked(reverse).mock.calls).toEqual([[mosElement]]);
+      expect(setInitialState).not.toHaveBeenCalled();
+    });
+
+    it("should not need an active scroll listener", () => {
+      const mosElement = makeMosElement();
+      vi.mocked(getPreparedElements).mockReturnValue([mosElement]);
+      setScrollY(POSITION_IN);
+
+      evaluateElementPositions();
+
+      expect(addEventListenerSpy).not.toHaveBeenCalled();
+      expect(play).toHaveBeenCalledWith(mosElement);
+    });
+
+    it("should do nothing when no elements are tracked", () => {
+      evaluateElementPositions();
+
+      expect(getPositionIn).not.toHaveBeenCalled();
+      expect(setInitialState).not.toHaveBeenCalled();
+      expect(setFinalState).not.toHaveBeenCalled();
+      expect(play).not.toHaveBeenCalled();
+      expect(reverse).not.toHaveBeenCalled();
     });
   });
 });

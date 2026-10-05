@@ -1,6 +1,25 @@
 packages:
   - packages/*
   - apps/*
-onlyBuiltDependencies:
-  - esbuild
-  - sharp
+
+# settings (moved from .npmrc and the package.json "pnpm" field, which pnpm 11+ no longer reads)
+nodeLinker: hoisted
+autoInstallPeers: true
+
+# make working with workspace packages easier
+preferWorkspacePackages: true
+linkWorkspacePackages: true
+
+# This prevents the examples to have the `workspace:` prefix
+saveWorkspaceProtocol: false
+
+peerDependencyRules:
+  allowAny:
+    - astro
+    - vite
+
+allowBuilds:
+  "@tailwindcss/oxide": true
+  esbuild: true
+  lightningcss-cli: true
+  sharp: true

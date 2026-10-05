@@ -91,6 +91,8 @@ export default defineConfig([
       ".github/",
       ".changeset/",
       "**/coverage/",
+      "**/.turbo/",
+      "**/.astro/",
     ],
   },
 ]);

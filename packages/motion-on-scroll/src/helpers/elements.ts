@@ -4,9 +4,10 @@
 // This module provides a single source of truth for all MOS elements,
 // based on the AOS prepare() pattern.
 
+import { cancelPendingShow } from "./animations.js";
 import { resolveElementOptions } from "./attributes.js";
 import { getPositionIn, getPositionOut } from "./position-calculator.js";
-import type { MosElement, MosOptions } from "./types.js";
+import type { ElementOptions, MosElement, MosOptions } from "./types.js";
 
 // ===================================================================
 // UNIFIED ELEMENT STORAGE (SINGLE SOURCE OF TRUTH)
@@ -41,21 +42,74 @@ export function getMosElements(findNewElements: boolean = false): HTMLElement[] 
 // ===================================================================
 
 /**
+ * Options that define the animation itself. If any of these change between
+ * refreshes the existing animation controls can no longer be reused.
+ */
+const ANIMATION_OPTION_KEYS = [
+  "keyframes",
+  "duration",
+  "delay",
+  "distance",
+  "easing",
+  "timeUnits",
+] as const satisfies readonly (keyof ElementOptions)[];
+
+function hasAnimationChanged(previous: ElementOptions, next: ElementOptions): boolean {
+  return ANIMATION_OPTION_KEYS.some((key) => previous[key] !== next[key]);
+}
+
+/**
+ * Cancels the animation controls of an element (if any) and forgets them
+ */
+export function disposeControls(mosElement: MosElement): void {
+  cancelPendingShow(mosElement);
+  try {
+    mosElement.controls?.cancel();
+  } catch {
+    // the element may already be detached - nothing left to clean up
+  }
+  mosElement.controls = undefined;
+}
+
+/**
  * Prepares all MOS elements for animation tracking (AOS-style prepare function)
- * Finds elements, calculates positions, sets initial states, and stores everything
- * in a unified array
+ * Resolves options and calculates positions for every element.
+ *
+ * Elements that are already tracked keep their state (like AOS, which reuses its
+ * element objects on refresh), so already-animated elements are not reset.
+ * Elements that are no longer in the list have their animations cleaned up.
  */
 export function prepareElements(elements: HTMLElement[], options: MosOptions): MosElement[] {
-  // Clear previous prepared elements
+  const previous = new Map(mosElements.map((mosEl) => [mosEl.element, mosEl]));
+
   mosElements = [];
 
-  // Prepare each element
   elements.forEach((element) => {
     const mosElement = prepareElement(element, options);
-    if (mosElement) {
-      mosElements.push(mosElement);
+    if (!mosElement) return;
+
+    const existing = previous.get(element);
+    if (existing) {
+      previous.delete(element);
+
+      // Carry state over; only keep the animation if it is still the same animation
+      mosElement.animated = existing.animated;
+      if (hasAnimationChanged(existing.options, mosElement.options)) {
+        disposeControls(existing);
+      } else {
+        mosElement.controls = existing.controls;
+      }
     }
+
+    if (mosElement.options.initClassName) {
+      element.classList.add(mosElement.options.initClassName);
+    }
+
+    mosElements.push(mosElement);
   });
+
+  // Anything left is no longer tracked (removed from the DOM or lost its data-mos attribute)
+  previous.forEach(disposeControls);
 
   return mosElements;
 }
@@ -65,8 +119,8 @@ export function prepareElements(elements: HTMLElement[], options: MosOptions): M
  * Calculates positions, resolves options, and creates MosElement object
  */
 export function prepareElement(element: HTMLElement, options: MosOptions): MosElement | null {
-  const animationName = element.getAttribute("data-mos");
-  if (!animationName) return null;
+  // An empty data-mos attribute is still a MOS element (it uses the default "fade")
+  if (!element.hasAttribute("data-mos")) return null;
 
   // Resolve element-specific options using existing attributes system
   const elementOptions = resolveElementOptions(element, options);
@@ -86,7 +140,6 @@ export function prepareElement(element: HTMLElement, options: MosOptions): MosEl
     options: elementOptions,
     position,
     animated: false,
-    isReversing: false,
     controls: undefined,
   };
 
@@ -119,7 +172,7 @@ export function updatePreparedElements(elements: MosElement[]): void {
 }
 
 /**
- * Clears all prepared elements
+ * Clears all prepared elements without touching their animations
  */
 export function clearAllElements(): void {
   mosElements = [];
@@ -127,6 +180,7 @@ export function clearAllElements(): void {
 
 export default {
   clearAllElements,
+  disposeControls,
   findPreparedElement,
   getMosElements,
   getPreparedElements,

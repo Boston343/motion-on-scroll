@@ -25,22 +25,30 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "unpkg": "./dist/mos.global.js",
+  "jsdelivr": "./dist/mos.global.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./mos.css": "./dist/mos.css",
     "./package.json": "./package.json",
     "./dist/*": "./dist/*"
   },
   "files": [
     "dist"
   ],
+  "sideEffects": [
+    "**/*.css",
+    "./dist/mos.global.js"
+  ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "tsdown",
+    "dev": "tsdown --watch",
     "test": "vitest",
+    "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "mos:link": "pnpm link --global",
     "mos:unlink": "pnpm rm --global motion-on-scroll",
@@ -52,19 +60,19 @@
     "publish:release": "pnpm publish --access public",
     "changeset": "changeset",
     "local:release": "changeset version && changeset publish",
-    "ci": "pnpm build && pnpm format:check && pnpm test",
+    "ci": "pnpm build && pnpm format:check && pnpm test:run",
     "prepublishOnly": "pnpm run ci"
   },
   "dependencies": {
-    "motion": "^12.23.3"
+    "motion": "^12.23.3 || ^13.0.0 || ^14.0.0"
   },
   "devDependencies": {
-    "@types/jsdom": "^21.1.7",
-    "@vitest/coverage-v8": "^3.2.4",
-    "jsdom": "^26.1.0",
-    "tsup": "8.5.0",
-    "vitest": "^3.2.4",
-    "lightningcss-cli": "^1.24.0"
+    "@types/jsdom": "^30.0.0",
+    "@vitest/coverage-v8": "^5.0.3",
+    "jsdom": "^30.1.1",
+    "lightningcss-cli": "^1.33.0",
+    "tsdown": "0.23.0",
+    "vitest": "^5.0.3"
   },
   "engines": {
     "node": "^20.6.0 || >=22.0.0"

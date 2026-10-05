@@ -1,109 +1,200 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-
-// Mock motion before importing modules under test
-vi.mock("motion", () => {
-  return {
-    animate: vi.fn(() => ({
-      play: vi.fn(),
-      pause: vi.fn(),
-      stop: vi.fn(),
-      complete: vi.fn(),
-      finished: Promise.resolve(),
-      speed: 1,
-      time: 0,
-    })),
-    spring: vi.fn((opts: any) => ({ ...opts, _spring: true })),
-  };
-});
-
-import { JSDOM } from "jsdom";
 import * as motion from "motion";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { play, registerAnimation } from "../helpers/animations.js";
+import { play, registerAnimation, setFinalState, setInitialState } from "../helpers/animations.js";
 import { DEFAULT_OPTIONS } from "../helpers/constants.js";
-import { prepareElement, updatePreparedElements } from "../helpers/elements.js";
-import type { ElementOptions } from "../helpers/types.js";
+import { clearAllElements, prepareElement, updatePreparedElements } from "../helpers/elements.js";
+import type { MosElement, MosOptions } from "../helpers/types.js";
 
-// Establish a DOM for motion and our utilities to interact with
-beforeAll(() => {
-  const { window } = new JSDOM("<html><body></body></html>");
-  // @ts-expect-error attach globals for jsdom
-  global.window = window;
-  global.document = window.document;
-  global.HTMLElement = window.HTMLElement;
-});
+// ===================================================================
+// TEST HELPERS
+// ===================================================================
 
-function makeOpts(partial: Partial<ElementOptions> = {}): ElementOptions {
-  // The test suite predates the rename from "preset" to "keyframes" – include both for safety.
-  return {
-    ...DEFAULT_OPTIONS,
-    keyframes: "fade", // default
-    once: false,
-    ...(partial as any),
-  } as ElementOptions;
+// Reference to the mocked motion.animate fn created in vitest.setup.ts
+const animateSpy = motion.animate as unknown as ReturnType<typeof vi.fn>;
+
+function makeControls() {
+  return { play: vi.fn(), pause: vi.fn(), complete: vi.fn(), cancel: vi.fn(), speed: 0 };
 }
 
-describe("registerAnimation", () => {
-  const animateSpy = motion.animate as unknown as ReturnType<typeof vi.fn>;
-  let div: HTMLElement;
+/** Creates a tracked element using the given data-mos name */
+function track(
+  name: string,
+  attrs: Record<string, string> = {},
+  globalOptions: Partial<MosOptions> = {},
+): MosElement {
+  const element = document.createElement("div");
+  element.setAttribute("data-mos", name);
+  Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, value));
+  document.body.appendChild(element);
 
+  const mosElement = prepareElement(element, { ...DEFAULT_OPTIONS, ...globalOptions });
+  if (!mosElement) throw new Error("Failed to prepare element for test");
+  updatePreparedElements([mosElement]);
+  return mosElement;
+}
+
+// ===================================================================
+// REGISTER ANIMATION
+// ===================================================================
+
+describe("registerAnimation", () => {
   beforeEach(() => {
-    div = document.createElement("div");
-    // Add required data-mos attribute for element preparation
-    div.setAttribute("data-mos", "fade");
-    document.body.appendChild(div);
+    document.body.innerHTML = "";
+    clearAllElements();
     vi.clearAllMocks();
   });
 
-  it("uses user-registered animation when key matches", () => {
-    const NAME = "custom-test-animation";
+  it("uses the registered factory instead of motion's animate when the name matches", () => {
+    const controls = makeControls();
+    const factory = vi.fn(() => controls as any);
+    registerAnimation("register-spec-basic", factory);
+    const mosElement = track("register-spec-basic");
+
+    play(mosElement);
+
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(animateSpy).not.toHaveBeenCalled();
+    expect(mosElement.controls).toBe(controls);
+    expect(controls.speed).toBe(1);
+    expect(controls.play).toHaveBeenCalledTimes(1);
+    expect(mosElement.animated).toBe(true);
+    expect(mosElement.element.classList.contains("mos-animate")).toBe(true);
+  });
+
+  it("passes the element and its resolved options to the factory", () => {
+    const factory = vi.fn((_el: HTMLElement, _opts: any) => makeControls() as any);
+    registerAnimation("register-spec-options", factory);
+    const mosElement = track(
+      "register-spec-options",
+      { "data-mos-duration": "750", "data-mos-delay": "50", "data-mos-id": "hero" },
+      { easing: "linear" },
+    );
+
+    play(mosElement);
+
+    const [el, opts] = factory.mock.calls[0];
+    expect(el).toBe(mosElement.element);
+    // options are handed over as configured (no unit conversion), except for the delay,
+    // which MOS applies itself and therefore reports as 0
+    expect(opts).toEqual({ ...mosElement.options, delay: 0 });
+    expect(mosElement.options.delay).toBe(50);
+    expect(opts).toMatchObject({
+      keyframes: "register-spec-options",
+      duration: 750,
+      delay: 0,
+      easing: "linear",
+      timeUnits: "ms",
+      id: "hero",
+    });
+  });
+
+  it("lets the factory build its animation with motion's animate", () => {
     const KEYFRAMES = { opacity: [0, 1], scale: [0.4, 1] };
+    registerAnimation("register-spec-motion", (el) =>
+      motion.animate(el, KEYFRAMES, { duration: 0.5 }),
+    );
+    const mosElement = track("register-spec-motion");
 
-    // Create a spy for the custom animation factory
-    const customFactory = vi.fn((el) => motion.animate(el, KEYFRAMES, { duration: 0.5 }));
-    registerAnimation(NAME, customFactory);
+    play(mosElement);
 
-    // Set the data-mos attribute to the custom animation name
-    div.setAttribute("data-mos", NAME);
-
-    // Prepare the element before calling play
-    const options = makeOpts(); // Use default options
-    const mosElement = prepareElement(div, options);
-    if (mosElement) {
-      updatePreparedElements([mosElement]);
-      play(mosElement);
-
-      // Verify the custom factory was called
-      expect(customFactory).toHaveBeenCalledTimes(1);
-      expect(customFactory).toHaveBeenCalledWith(div, expect.any(Object));
-
-      // Verify motion.animate was called with custom keyframes
-      expect(animateSpy).toHaveBeenCalledTimes(1);
-      const [elArg, keyframesArg, optionsArg] = animateSpy.mock.calls[0];
-      expect(elArg).toBe(div);
-      expect(keyframesArg).toEqual(KEYFRAMES);
-      expect(optionsArg.duration).toBe(0.5);
-    } else {
-      throw new Error("Failed to prepare element for test");
-    }
-  });
-
-  it("falls back to built-in flow when no custom animation exists", () => {
-    // Prepare the element before calling play
-    const options = makeOpts({ keyframes: "unknown-preset" as any });
-    const mosElement = prepareElement(div, options);
-    if (mosElement) {
-      updatePreparedElements([mosElement]);
-      play(mosElement);
-    } else {
-      throw new Error("Failed to prepare element for test");
-    }
     expect(animateSpy).toHaveBeenCalledTimes(1);
+    expect(animateSpy).toHaveBeenCalledWith(mosElement.element, KEYFRAMES, { duration: 0.5 });
+    expect(mosElement.controls).toBe(animateSpy.mock.results[0].value);
   });
 
-  it("throws when registering with an empty name", () => {
-    expect(() =>
-      registerAnimation("" as any, () => ({ finished: Promise.resolve(), stop: () => {} }) as any),
-    ).toThrow(/non-empty/i);
+  it("calls the factory only once per element", () => {
+    const controls = makeControls();
+    const factory = vi.fn(() => controls as any);
+    registerAnimation("register-spec-once", factory);
+    const mosElement = track("register-spec-once");
+
+    setInitialState(mosElement);
+    play(mosElement);
+    play(mosElement);
+
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(controls.pause).toHaveBeenCalledTimes(1);
+    expect(controls.play).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the factory for setInitialState and setFinalState too", () => {
+    const controls = makeControls();
+    registerAnimation("register-spec-state", () => controls as any);
+
+    const mosElement = track("register-spec-state");
+    setFinalState(mosElement);
+
+    expect(animateSpy).not.toHaveBeenCalled();
+    expect(controls.complete).toHaveBeenCalledTimes(1);
+    expect(mosElement.animated).toBe(true);
+  });
+
+  it("overwrites a previously registered animation with the same name", () => {
+    const first = vi.fn(() => makeControls() as any);
+    const second = vi.fn(() => makeControls() as any);
+    registerAnimation("register-spec-overwrite", first);
+    registerAnimation("register-spec-overwrite", second);
+
+    play(track("register-spec-overwrite"));
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it("takes precedence over a built-in preset of the same name", () => {
+    const factory = vi.fn(() => makeControls() as any);
+    registerAnimation("zoom-out-left", factory);
+
+    play(track("zoom-out-left"));
+
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(animateSpy).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the built-in flow when no custom animation exists", () => {
+    const mosElement = track("register-spec-unknown");
+    play(mosElement);
+
+    expect(animateSpy).toHaveBeenCalledTimes(1);
+    // unknown names use the default fade preset
+    expect(animateSpy).toHaveBeenCalledWith(
+      mosElement.element,
+      { opacity: [0, 1] },
+      { duration: 0.4, ease: [0.25, 0.1, 0.25, 1], autoplay: false },
+    );
+  });
+
+  it("applies the delay itself (in seconds too) and passes the factory a delay of 0", () => {
+    vi.useFakeTimers();
+    try {
+      const controls = makeControls();
+      const factory = vi.fn((_el: HTMLElement, _opts: any) => controls as any);
+      registerAnimation("register-spec-delay", factory);
+      const mosElement = track(
+        "register-spec-delay",
+        { "data-mos-delay": "0.5" },
+        { timeUnits: "s", duration: 1 },
+      );
+
+      play(mosElement);
+
+      expect(factory.mock.calls[0][1]).toMatchObject({ delay: 0, duration: 1, timeUnits: "s" });
+      expect(controls.play).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(499);
+      expect(controls.play).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(controls.speed).toBe(1);
+      expect(controls.play).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("throws when registering with an empty or blank name", () => {
+    const factory = () => makeControls() as any;
+    expect(() => registerAnimation("", factory)).toThrow(/non-empty/i);
+    expect(() => registerAnimation("   ", factory)).toThrow(/non-empty/i);
   });
 });

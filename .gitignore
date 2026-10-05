@@ -34,3 +34,7 @@ pnpm-debug.log*
 # vitest
 coverage/
 coverage-final.json
+
+# local development files
+.vscode/
+.agents/
