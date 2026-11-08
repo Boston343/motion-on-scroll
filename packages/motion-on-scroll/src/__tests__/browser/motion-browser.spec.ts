@@ -121,8 +121,13 @@ describe("waiting elements", () => {
     controls.pause();
     try {
       await wait(100);
-      // Any count above the idle allowance used below shows the loop is running
-      expect(await frameRequestsDuring(500)).toBeGreaterThan(2);
+      // Motion keeps rescheduling: wait (up to a timeout, so a slow runner only
+      // takes longer) until it has asked for more frames than the idle allowance
+      // used below. expect.poll uses timers, so it adds no frame requests itself.
+      const before = globalThis.mosFrameRequests();
+      await expect
+        .poll(() => globalThis.mosFrameRequests() - before, { timeout: 3000, interval: 50 })
+        .toBeGreaterThan(2);
     } finally {
       controls.stop();
     }
