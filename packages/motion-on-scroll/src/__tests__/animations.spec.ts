@@ -463,6 +463,131 @@ describe("setInitialState - parking motion's idle frame loop", () => {
     expect(controlsOf().pause).toHaveBeenCalledTimes(1);
   });
 
+  // Motion >= 14.7: animate() returns a Timeline holding the group in `group`, and
+  // inner animations have no stopDriver(), only a `driver`
+  it("unwraps a Timeline's group and stops each paused animation's driver", () => {
+    const first = { state: "paused", driver: { stop: vi.fn() } };
+    const second = { state: "paused", driver: { stop: vi.fn() } };
+    const controls = {
+      pause: vi.fn(),
+      group: { animations: [{ animation: first }, { animation: second }] },
+    };
+
+    setInitialState(trackWithControls("park-spec-timeline", controls));
+    nextFrame();
+    expect(first.driver.stop).not.toHaveBeenCalled();
+    nextFrame();
+
+    expect(first.driver.stop).toHaveBeenCalledTimes(1);
+    expect(second.driver.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops only the frame loop of a transform driver, not the whole driver", () => {
+    const driver = { stop: vi.fn(), stopJS: vi.fn() };
+    const controls = {
+      pause: vi.fn(),
+      group: { animations: [{ animation: { state: "paused", driver } }] },
+    };
+
+    setInitialState(trackWithControls("park-spec-transform-driver", controls));
+    nextFrame();
+    nextFrame();
+
+    expect(driver.stopJS).toHaveBeenCalledTimes(1);
+    expect(driver.stop).not.toHaveBeenCalled();
+  });
+
+  it("prefers stopDriver() over the driver when both exist", () => {
+    const animation = { state: "paused", stopDriver: vi.fn(), driver: { stop: vi.fn() } };
+    const controls = { pause: vi.fn(), animations: [{ animation }] };
+
+    setInitialState(trackWithControls("park-spec-both", controls));
+    nextFrame();
+    nextFrame();
+
+    expect(animation.stopDriver).toHaveBeenCalledTimes(1);
+    expect(animation.driver.stop).not.toHaveBeenCalled();
+  });
+
+  it("leaves the driver of a Timeline animation alone when it is running", () => {
+    const driver = { stop: vi.fn() };
+    const controls = {
+      pause: vi.fn(),
+      group: { animations: [{ animation: { state: "running", driver } }] },
+    };
+
+    setInitialState(trackWithControls("park-spec-timeline-running", controls));
+    nextFrame();
+    nextFrame();
+
+    expect(driver.stop).not.toHaveBeenCalled();
+  });
+
+  it("does not use a `group` that has no animations array (a transform's compositor group)", () => {
+    const controls = {
+      pause: vi.fn(),
+      state: "paused",
+      driver: { stop: vi.fn() },
+      group: { tracks: new Set() },
+    };
+
+    setInitialState(trackWithControls("park-spec-compositor-group", controls));
+    nextFrame();
+    nextFrame();
+
+    expect(controls.driver.stop).toHaveBeenCalledTimes(1);
+  });
+
+  // Motion 14.2+ skips the first frame of a main-thread animation paused right after
+  // animate(); MOS seeks it to 0 a microtask later
+  it("seeks freshly paused controls to 0 a microtask later", async () => {
+    const controls = { pause: vi.fn(), state: "paused", time: 0.3 };
+
+    setInitialState(trackWithControls("first-frame-spec", controls));
+    expect(controls.time).toBe(0.3);
+
+    await Promise.resolve();
+    expect(controls.time).toBe(0);
+  });
+
+  it("does not seek controls that started playing in the same task", async () => {
+    const controls = { pause: vi.fn(), play: vi.fn(), speed: 1, state: "paused", time: 0.3 };
+    const mosElement = trackWithControls("first-frame-spec-played", controls);
+
+    setInitialState(mosElement);
+    play(mosElement);
+    controls.state = "running";
+
+    await Promise.resolve();
+    expect(controls.time).toBe(0.3);
+  });
+
+  it("does not seek controls the element no longer uses", async () => {
+    const controls = { pause: vi.fn(), state: "paused", time: 0.3 };
+    const mosElement = trackWithControls("first-frame-spec-replaced", controls);
+
+    setInitialState(mosElement);
+    mosElement.controls = undefined;
+
+    await Promise.resolve();
+    expect(controls.time).toBe(0.3);
+  });
+
+  it("does not throw for custom controls with a read-only time", async () => {
+    const controls = {
+      pause: vi.fn(),
+      state: "paused",
+      get time() {
+        return 0.3;
+      },
+    };
+
+    setInitialState(trackWithControls("first-frame-spec-readonly", controls));
+
+    await expect(Promise.resolve()).resolves.toBeUndefined();
+    expect(controls.time).toBe(0.3);
+  });
+
   it("does not throw for an empty animations array", () => {
     const controls = { pause: vi.fn(), animations: [], stopDriver: vi.fn(), state: "paused" };
 

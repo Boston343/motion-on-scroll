@@ -12,6 +12,7 @@
     "dev": "turbo dev --parallel",
     "test": "pnpm --filter=motion-on-scroll test",
     "test:coverage": "pnpm --filter=motion-on-scroll test:coverage",
+    "test:browser": "pnpm --filter=motion-on-scroll test:browser",
     "clean": "turbo clean",
     "clean:node": "node scripts/clean.mjs",
     "format": "eslint . --fix && prettier -w . --ignore-unknown --cache",

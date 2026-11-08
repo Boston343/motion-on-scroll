@@ -48,6 +48,8 @@ quirks included.
   - `src/css/mos.css` - stylesheet, minified into `dist/` by the build.
   - `src/__tests__/*.spec.ts` - vitest specs; `lifecycle.spec.ts` is the integration spec (real
     modules, only `motion` mocked).
+  - `src/__tests__/browser/*.spec.ts` - real-browser specs (`vitest.browser.config.ts`): real
+    Motion in headless Chromium, sampling computed styles and counting `requestAnimationFrame`.
   - `tsdown.config.ts` - two builds: ESM `dist/index.js` (+ `.d.ts`, `motion` external) and the
     IIFE `dist/mos.global.js` (Motion bundled); the CSS is built in its `onSuccess` hook.
 - `apps/docs` - Astro Starlight docs site (workspace package `motion-on-scroll-docs`), deployed at
@@ -65,11 +67,14 @@ quirks included.
 - Test, one-shot: `pnpm --filter=motion-on-scroll test:run`
   - `pnpm test` is plain `vitest`, which is watch mode in a terminal.
   - Coverage: `pnpm test:coverage`
+  - Real-browser specs: `pnpm test:browser` (headless Chromium via vitest browser mode; first
+    install the browser with `pnpm --filter=motion-on-scroll exec playwright install chromium`; on
+    Linux add `--with-deps` to also install Chromium's system libraries, as CI does)
 - Typecheck: `pnpm typecheck` (turbo -> `tsc --noEmit`; library `src` only, specs are excluded)
 - Lint + format check (library): `pnpm mos:format:check` (`eslint . && prettier --check .`)
 - Lint + format fix: `pnpm format` (whole repo) or `pnpm mos:format` (library)
 - What CI runs: `pnpm typecheck`, `pnpm run ci` (= `mos:build`, `mos:format:check`, `test:run`),
-  then `pnpm docs:build`
+  `pnpm test:browser`, then `pnpm docs:build`
 - Docs dev server: `pnpm docs:dev` (needs the library built first: `pnpm mos:build`); build:
   `pnpm docs:build`, which builds the library itself. The docs always use the workspace library,
   not the npm release.
@@ -92,7 +97,10 @@ quirks included.
 ## Verifying animation behaviour
 
 jsdom has no layout or animation engine and the unit tests mock `motion`, so they cannot show
-whether an animation looks right. Any change to animation behaviour needs a real-browser check:
+whether an animation looks right. Any change to animation behaviour needs a real-browser check.
+`pnpm test:browser` covers waiting elements (first keyframe, idle frame loop, show delay) and
+playing in, out and in again; add a spec there when a fix can be pinned down that way. For
+anything else, or to compare Motion versions, check by hand:
 
 - Build, then load a static page that includes `dist/mos.css` and `dist/mos.global.js` and calls
   `MOS.init()`; drive scrolling and sample computed `opacity` / `transform` per frame.
@@ -134,10 +142,19 @@ whether an animation looks right. Any change to animation behaviour needs a real
   timeline is replayed in the wrong place when the animation runs backwards. Like AOS, there is no
   delay on the way out. This covers custom `registerAnimation` animations too: their factory is
   handed `delay: 0` so it cannot add the delay to Motion's timeline a second time.
-- `releaseIdleFrameLoop` in `helpers/animations.ts` uses Motion internals
-  (`animations[].animation.stopDriver()`) to stop paused animations ticking every frame. It is
-  guarded, so if a Motion upgrade removes them the only symptom is idle `requestAnimationFrame`
-  activity. Re-check it when bumping Motion.
+- `releaseIdleFrameLoop` in `helpers/animations.ts` uses Motion internals to stop paused
+  animations ticking every frame: `stopDriver()` on Motion < 14.7; on 14.7+ (where `animate()`
+  returns a `Timeline` holding `group.animations` and `stopDriver()` is gone) it stops
+  `animation.driver` directly (`stopJS()` on transform drivers from 14.10.1; on 14.7 - 14.10.0
+  only `stop()` exists, which also triggers one harmless compositor-group rebuild). It is guarded,
+  so if a Motion upgrade changes these the only symptom is idle `requestAnimationFrame` activity.
+  Re-check it when bumping Motion: count `requestAnimationFrame` calls on an idle page with a
+  custom `registerAnimation` that animates a colour (presets run on the compositor from 14.7 and
+  will not show the problem).
+- Motion 14.2+ bug (motiondivision/motion#4073): a transform animation with `onUpdate` that is
+  paused right after `animate()` never renders its first frame. `renderFirstFrame` in
+  `helpers/animations.ts` seeks it to 0 in a microtask so the element waits on its first keyframe.
+  Re-check it when bumping Motion; it can go once the oldest supported Motion no longer has the bug.
 - Completing a reversed Motion animation ends on its first (hidden) keyframe; set `speed = 1`
   before `complete()` when the goal is "show it".
 
