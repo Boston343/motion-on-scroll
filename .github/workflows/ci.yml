@@ -37,5 +37,11 @@ jobs:
       - name: Run CI
         run: pnpm run ci
 
+      - name: Install Playwright Chromium
+        run: pnpm --filter=motion-on-scroll exec playwright install --with-deps chromium
+
+      - name: Browser tests
+        run: pnpm test:browser
+
       - name: Build docs
         run: pnpm docs:build

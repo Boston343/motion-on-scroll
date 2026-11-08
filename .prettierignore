@@ -2,6 +2,7 @@
 **/dist
 **/astro
 **/coverage
+**/.vitest
 
 # Ignore node_modules
 node_modules

@@ -48,6 +48,8 @@ quirks included.
   - `src/css/mos.css` - stylesheet, minified into `dist/` by the build.
   - `src/__tests__/*.spec.ts` - vitest specs; `lifecycle.spec.ts` is the integration spec (real
     modules, only `motion` mocked).
+  - `src/__tests__/browser/*.spec.ts` - real-browser specs (`vitest.browser.config.ts`): real
+    Motion in headless Chromium, sampling computed styles and counting `requestAnimationFrame`.
   - `tsdown.config.ts` - two builds: ESM `dist/index.js` (+ `.d.ts`, `motion` external) and the
     IIFE `dist/mos.global.js` (Motion bundled); the CSS is built in its `onSuccess` hook.
 - `apps/docs` - Astro Starlight docs site (workspace package `motion-on-scroll-docs`), deployed at
@@ -65,11 +67,13 @@ quirks included.
 - Test, one-shot: `pnpm --filter=motion-on-scroll test:run`
   - `pnpm test` is plain `vitest`, which is watch mode in a terminal.
   - Coverage: `pnpm test:coverage`
+  - Real-browser specs: `pnpm test:browser` (headless Chromium via vitest browser mode; first
+    install the browser with `pnpm --filter=motion-on-scroll exec playwright install chromium`)
 - Typecheck: `pnpm typecheck` (turbo -> `tsc --noEmit`; library `src` only, specs are excluded)
 - Lint + format check (library): `pnpm mos:format:check` (`eslint . && prettier --check .`)
 - Lint + format fix: `pnpm format` (whole repo) or `pnpm mos:format` (library)
 - What CI runs: `pnpm typecheck`, `pnpm run ci` (= `mos:build`, `mos:format:check`, `test:run`),
-  then `pnpm docs:build`
+  `pnpm test:browser`, then `pnpm docs:build`
 - Docs dev server: `pnpm docs:dev` (needs the library built first: `pnpm mos:build`); build:
   `pnpm docs:build`, which builds the library itself. The docs always use the workspace library,
   not the npm release.
@@ -92,7 +96,10 @@ quirks included.
 ## Verifying animation behaviour
 
 jsdom has no layout or animation engine and the unit tests mock `motion`, so they cannot show
-whether an animation looks right. Any change to animation behaviour needs a real-browser check:
+whether an animation looks right. Any change to animation behaviour needs a real-browser check.
+`pnpm test:browser` covers waiting elements (first keyframe, idle frame loop, show delay) and
+playing in, out and in again; add a spec there when a fix can be pinned down that way. For
+anything else, or to compare Motion versions, check by hand:
 
 - Build, then load a static page that includes `dist/mos.css` and `dist/mos.global.js` and calls
   `MOS.init()`; drive scrolling and sample computed `opacity` / `transform` per frame.
