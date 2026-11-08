@@ -145,34 +145,81 @@ export function setInitialState(mosElement: MosElement): void {
   // Pause controls without setting time to preserve natural element position
   // This is crucial for accurate scroll position calculations
   controls.pause();
+  renderFirstFrame(mosElement, controls);
   releaseIdleFrameLoop(controls);
 
   mosElement.animated = false;
 }
 
 /**
+ * Makes sure a freshly paused animation shows its first keyframe
+ *
+ * Works around a Motion bug (14.2+, motiondivision/motion#4073): a transform
+ * animation with an `onUpdate` callback that is paused right after animate() (or
+ * created with `autoplay: false`) never renders its first frame. The element would
+ * sit at its final state while waiting below the fold or during the show delay, then
+ * jump back to the start when it plays. Seeking to 0 once the animation has resolved
+ * (a microtask later) renders that frame; on unaffected versions it is a no-op seek
+ * to where the animation already is.
+ *
+ * @param mosElement - The element whose controls were just paused
+ * @param controls - Those controls
+ */
+function renderFirstFrame(mosElement: MosElement, controls: AnimationPlaybackControls): void {
+  queueMicrotask(() => {
+    // Skip if the element was played, reset or destroyed in the meantime
+    if (mosElement.controls !== controls || controls.state !== "paused") return;
+    try {
+      controls.time = 0;
+    } catch {
+      // custom controls with a read-only time: leave them as they are
+    }
+  });
+}
+
+/**
  * Stops the frame loop of a paused animation once its first frame is on screen
  *
  * Motion keeps a requestAnimationFrame loop running for every paused JS-driven
- * (transform) animation, so a page full of elements waiting below the fold would
- * tick 60 times a second for nothing. Motion has no public way to park a paused
- * animation, so this reaches for its internal `stopDriver()`; if that ever goes
- * away this silently does nothing and the animations simply keep ticking as before.
- * Motion starts a fresh loop by itself on the next play().
+ * animation, so a page full of elements waiting below the fold would tick 60 times
+ * a second for nothing. Motion has no public way to park a paused animation, so
+ * this reaches for its internals:
+ * - Motion < 14.7: `stopDriver()`, which stops and drops the driver; play() makes a new one.
+ * - Motion >= 14.7: `stopDriver()` is gone (transforms mostly run on the compositor
+ *   now, but other values such as colours still tick on the main thread), so stop
+ *   the driver directly. play() restarts the same driver. From 14.10.1 a transform
+ *   driver has `stopJS()`, which stops only its frame loop. On 14.7 - 14.10.0 there is
+ *   only `stop()`, which also asks the compositor animation group to release the
+ *   animation; a paused animation is kept, so this costs at most one group rebuild.
+ *   animate() also returns a `Timeline` here, which keeps the group of per-value
+ *   animations in `group`.
+ * If these ever go away this silently does nothing and the animations simply keep
+ * ticking as before.
  */
 function releaseIdleFrameLoop(controls: AnimationPlaybackControls): void {
-  type Parkable = { state?: string; stopDriver?: () => void };
+  type Driver = { stop?: () => void; stopJS?: () => void };
+  type Parkable = { state?: string; stopDriver?: () => void; driver?: Driver };
   type Wrapper = { animation?: Parkable };
+  type Group = { animations?: Wrapper[] };
 
-  // animate() returns a group of per-value animations, each wrapping the real one
-  const group = (controls as { animations?: Wrapper[] }).animations ?? [controls as Wrapper];
+  // animate() returns a group of per-value animations (wrapped in a Timeline on
+  // Motion >= 14.7), each wrapping the real one
+  const group = (controls as { group?: Group }).group?.animations ??
+    (controls as Group).animations ?? [controls as Wrapper];
 
   // Two frames, so the paused first frame has been rendered before the loop stops
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
       group.forEach((wrapper) => {
         const animation = wrapper.animation ?? (wrapper as Parkable);
-        if (animation.state === "paused") animation.stopDriver?.();
+        if (animation.state !== "paused") return;
+        if (animation.stopDriver) {
+          animation.stopDriver();
+        } else if (animation.driver) {
+          const { driver } = animation;
+          if (driver.stopJS) driver.stopJS();
+          else driver.stop?.();
+        }
       });
     }),
   );

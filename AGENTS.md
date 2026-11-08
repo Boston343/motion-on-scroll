@@ -134,10 +134,19 @@ whether an animation looks right. Any change to animation behaviour needs a real
   timeline is replayed in the wrong place when the animation runs backwards. Like AOS, there is no
   delay on the way out. This covers custom `registerAnimation` animations too: their factory is
   handed `delay: 0` so it cannot add the delay to Motion's timeline a second time.
-- `releaseIdleFrameLoop` in `helpers/animations.ts` uses Motion internals
-  (`animations[].animation.stopDriver()`) to stop paused animations ticking every frame. It is
-  guarded, so if a Motion upgrade removes them the only symptom is idle `requestAnimationFrame`
-  activity. Re-check it when bumping Motion.
+- `releaseIdleFrameLoop` in `helpers/animations.ts` uses Motion internals to stop paused
+  animations ticking every frame: `stopDriver()` on Motion < 14.7; on 14.7+ (where `animate()`
+  returns a `Timeline` holding `group.animations` and `stopDriver()` is gone) it stops
+  `animation.driver` directly (`stopJS()` on transform drivers from 14.10.1; on 14.7 - 14.10.0
+  only `stop()` exists, which also triggers one harmless compositor-group rebuild). It is guarded,
+  so if a Motion upgrade changes these the only symptom is idle `requestAnimationFrame` activity.
+  Re-check it when bumping Motion: count `requestAnimationFrame` calls on an idle page with a
+  custom `registerAnimation` that animates a colour (presets run on the compositor from 14.7 and
+  will not show the problem).
+- Motion 14.2+ bug (motiondivision/motion#4073): a transform animation with `onUpdate` that is
+  paused right after `animate()` never renders its first frame. `renderFirstFrame` in
+  `helpers/animations.ts` seeks it to 0 in a microtask so the element waits on its first keyframe.
+  Re-check it when bumping Motion; it can go once the oldest supported Motion no longer has the bug.
 - Completing a reversed Motion animation ends on its first (hidden) keyframe; set `speed = 1`
   before `complete()` when the goal is "show it".
 
