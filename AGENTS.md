@@ -68,7 +68,8 @@ quirks included.
   - `pnpm test` is plain `vitest`, which is watch mode in a terminal.
   - Coverage: `pnpm test:coverage`
   - Real-browser specs: `pnpm test:browser` (headless Chromium via vitest browser mode; first
-    install the browser with `pnpm --filter=motion-on-scroll exec playwright install chromium`)
+    install the browser with `pnpm --filter=motion-on-scroll exec playwright install chromium`; on
+    Linux add `--with-deps` to also install Chromium's system libraries, as CI does)
 - Typecheck: `pnpm typecheck` (turbo -> `tsc --noEmit`; library `src` only, specs are excluded)
 - Lint + format check (library): `pnpm mos:format:check` (`eslint . && prettier --check .`)
 - Lint + format fix: `pnpm format` (whole repo) or `pnpm mos:format` (library)

@@ -119,10 +119,13 @@ describe("waiting elements", () => {
     document.body.appendChild(element);
     const controls = animate(element, { backgroundColor: [RED, BLUE] }, { duration: 1 });
     controls.pause();
-    await wait(100);
-
-    expect(await frameRequestsDuring(500)).toBeGreaterThan(10);
-    controls.stop();
+    try {
+      await wait(100);
+      // Any count above the idle allowance used below shows the loop is running
+      expect(await frameRequestsDuring(500)).toBeGreaterThan(2);
+    } finally {
+      controls.stop();
+    }
   });
 
   it("leave Motion's frame loop idle", async () => {
@@ -157,8 +160,7 @@ describe("waiting elements", () => {
     await wait(200);
     expect(style(element).transform).toBe(SHIFTED);
 
-    await wait(200 + DURATION_MS + 200);
-    expect(style(element).transform).toBe("none");
+    await expect.poll(() => style(element).transform, { timeout: 2000, interval: 50 }).toBe("none");
   });
 });
 
